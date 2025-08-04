@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Latest AI Research Blog - AI Research Papers Daily{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Blog</li>
+        </ol>
+    </nav>
+
+    <!-- Blog Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h2 mb-2">
+                                <i class="fas fa-blog me-2"></i>
+                                Latest AI Research Blog
+                            </h1>
+                            <p class="mb-0">
+                                Comprehensive coverage of {{ papers|length }} cutting-edge AI research papers
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-primary fs-6">{{ papers|length }} papers</span>
+                            <div class="mt-2">
+                                <small class="d-block">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ blog_date }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Content -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="markdown-content">
+                        {{ blog_content | safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Blog Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Blog Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Papers Covered:</strong>
+                        <p class="mb-0">{{ papers|length }} research papers</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Publication Date:</strong>
+                        <p class="mb-0">{{ blog_date }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Categories:</strong>
+                        <div class="mt-2">
+                            {% set categories = [] %}
+                            {% for paper in papers %}
+                                {% if paper.category and paper.category not in categories %}
+                                    {% set _ = categories.append(paper.category) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for category in categories %}
+                                <span class="badge bg-secondary me-1 mb-1">{{ category }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Unique Authors:</strong>
+                        <p class="mb-0">
+                            {% set all_authors = [] %}
+                            {% for paper in papers %}
+                                {% for author in paper.authors %}
+                                    {% if author not in all_authors %}
+                                        {% set _ = all_authors.append(author) %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                            {{ all_authors|length }} researchers
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-home me-2"></i>Back to Home
+                        </a>
+                        <a href="{{ url_for('archive') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-archive me-2"></i>View Archive
+                        </a>
+                        <button class="btn btn-outline-info" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print Blog
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Papers -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-link me-2"></i>Papers in This Blog
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for paper in papers[:5] %}
+                        <a href="{{ url_for('paper_detail', arxiv_id=paper.arxiv_id) }}" 
+                           class="list-group-item list-group-item-action">
+                            <h6 class="mb-1">{{ paper.title[:50] }}{% if paper.title|length > 50 %}...{% endif %}</h6>
+                            <small class="text-muted">
+                                {{ paper.authors[0] }}{% if paper.authors|length > 1 %} et al.{% endif %}
+                            </small>
+                        </a>
+                        {% endfor %}
+                        {% if papers|length > 5 %}
+                        <div class="text-center mt-2">
+                            <small class="text-muted">... and {{ papers|length - 5 }} more papers</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-home me-2"></i>Back to Home
+                </a>
+                <a href="{{ url_for('archive') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-archive me-2"></i>View Archive
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}AI Research Papers Daily - Latest Updates{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-3">
+                    <i class="fas fa-brain me-3"></i>
+                    Latest AI Research Papers
+                </h1>
+                <p class="lead mb-4">
+                    We write blogs about the latest research papers so you don't have to read them all!
+                </p>
+                <div class="d-flex gap-3">
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="fas fa-clock me-2"></i>
+                        Updated automatically
+                    </span>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center">
+                <div class="bg-white bg-opacity-10 rounded-3 p-4">
+                    <i class="fas fa-chart-line fa-4x mb-3"></i>
+                    <h4 class="mb-2">{{ papers|length }} Papers</h4>
+                    <p class="mb-0">Latest Research</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<div class="container">
+    {% if blogs %}
+    <!-- Blog Posts Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">
+                            <i class="fas fa-blog me-2"></i>
+                            Latest Blog Posts
+                        </h3>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-light text-primary fs-6">{{ blogs|length }} posts</span>
+                            <a href="{{ url_for('blog_list') }}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-list me-1"></i>View All Posts
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for blog in blogs[:3] %}
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="text-decoration-none">
+                                            {{ blog.title[:50] }}{% if blog.title|length > 50 %}...{% endif %}
+                                        </a>
+                                    </h5>
+                                    <div class="mb-2">
+                                        <span class="badge bg-primary me-2">{{ blog.paper_count }} papers</span>
+                                        <small class="text-muted">{{ blog.published_date }}</small>
+                                    </div>
+                                    <p class="card-text small">
+                                        {{ blog.summary[:150] }}{% if blog.summary|length > 150 %}...{% endif %}
+                                    </p>
+                                    <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="btn btn-outline-primary btn-sm">
+                                        Read Post
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if blogs|length > 3 %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('blog_list') }}" class="btn btn-primary">
+                            View All {{ blogs|length }} Blog Posts
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Papers Grid -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>
+                    Recent Research Papers
+                </h2>
+                <div class="d-flex gap-2">
+                    <span class="text-muted">Latest {{ papers|length }} papers from our database</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if papers %}
+    <div class="row g-4">
+        {% for paper in papers %}
+        <div class="col-lg-6 col-xl-4">
+            <div class="card paper-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title fw-bold mb-2">
+                                <a href="{{ url_for('paper_detail', arxiv_id=paper.arxiv_id) }}" class="text-decoration-none">
+                                    {{ paper.title[:80] }}{% if paper.title|length > 80 %}...{% endif %}
+                                </a>
+                            </h5>
+                        </div>
+                        {% if paper.novelty_score %}
+                        <span class="novelty-score ms-2">
+                            {{ "%.1f"|format(paper.novelty_score) }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <span class="category-badge me-2">
+                            {{ paper.category or 'AI/ML' }}
+                        </span>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ paper.published_date }}
+                        </small>
+                    </div>
+                    
+                    <p class="card-text text-muted mb-3">
+                        {{ paper.abstract[:200] }}{% if paper.abstract|length > 200 %}...{% endif %}
+                    </p>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-users me-1"></i>
+                            {{ paper.authors[:3]|join(', ') }}{% if paper.authors|length > 3 %} et al.{% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" 
+                           class="btn btn-primary btn-sm" target="_blank">
+                            <i class="fas fa-external-link-alt me-1"></i>
+                            Read Paper
+                        </a>
+                        <a href="{{ url_for('paper_detail', arxiv_id=paper.arxiv_id) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <div class="card-body">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted mb-3">No Papers Found</h4>
+                    <p class="text-muted mb-4">
+                        No research papers are available in the database yet. Papers are automatically fetched and updated in the background.
+                    </p>
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="{{ url_for('archive') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-archive me-2"></i>
+                            View Archive
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Statistics Section -->
+    {% if papers %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Recent Papers Statistics
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h3 class="text-primary fw-bold">{{ papers|length }}</h3>
+                                <p class="text-muted mb-0">Total Papers</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h3 class="text-success fw-bold">
+                                    {{ papers|selectattr('novelty_score', 'defined')|list|length }}
+                                </h3>
+                                <p class="text-muted mb-0">Scored Papers</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h3 class="text-info fw-bold">
+                                    {% set all_categories = [] %}
+                                    {% for paper in papers %}
+                                        {% if paper.category and paper.category not in all_categories %}
+                                            {% set _ = all_categories.append(paper.category) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ all_categories|length }}
+                                </h3>
+                                <p class="text-muted mb-0">Categories</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h3 class="text-warning fw-bold">
+                                {% set all_authors = [] %}
+                                {% for paper in papers %}
+                                    {% for author in paper.authors %}
+                                        {% if author not in all_authors %}
+                                            {% set _ = all_authors.append(author) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                                {{ all_authors|length }}
+                            </h3>
+                            <p class="text-muted mb-0">Unique Authors</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Blog Posts - AI Research Papers Daily{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Blog Posts</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <i class="fas fa-blog me-2"></i>AI Research Blog Posts
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Explore our collection of AI research paper summaries and insights
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-primary fs-6">{{ blogs|length }} blog posts</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Posts List -->
+    {% if blogs %}
+    <div class="row g-4">
+        {% for blog in blogs %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h3 class="card-title mb-3">
+                                <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="text-decoration-none">
+                                    {{ blog.title }}
+                                </a>
+                            </h3>
+                            
+                            <div class="mb-3">
+                                <span class="badge bg-primary me-2">{{ blog.paper_count }} papers</span>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ blog.published_date }}
+                                </small>
+                            </div>
+                            
+                            <div class="blog-summary mb-3">
+                                {{ blog.summary | safe }}
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" 
+                                   class="btn btn-primary">
+                                    <i class="fas fa-book-open me-2"></i>Read Full Post
+                                </a>
+                                <span class="text-muted small align-self-center">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ blog.created_at.split(' ')[0] if blog.created_at else 'Unknown' }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-md-end">
+                                {% if blog.categories %}
+                                <div class="mb-3">
+                                    <strong>Categories:</strong>
+                                    <div class="mt-2">
+                                        {% for category in blog.categories.split(',') %}
+                                        <span class="badge bg-secondary me-1 mb-1">{{ category.strip() }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-primary mb-1">{{ blog.paper_count }}</h4>
+                                        <small class="text-muted">Research Papers</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <div class="card-body">
+                    <i class="fas fa-blog fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted mb-3">No Blog Posts Yet</h4>
+                    <p class="text-muted mb-4">
+                        No blog posts have been published yet. Check back soon for the latest AI research insights!
+                    </p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>Back to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-home me-2"></i>Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

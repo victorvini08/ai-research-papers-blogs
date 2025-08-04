@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}{{ paper.title }} - AI Research Papers Daily{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Paper Details</li>
+        </ol>
+    </nav>
+
+    <!-- Paper Header -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h1 class="h2 mb-2">{{ paper.title }}</h1>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="category-badge">
+                                    {{ paper.category or 'AI/ML' }}
+                                </span>
+                                {% if paper.novelty_score %}
+                                <span class="novelty-score">
+                                    Novelty Score: {{ "%.1f"|format(paper.novelty_score) }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <small class="d-block">
+                                <i class="fas fa-calendar me-1"></i>
+                                Published: {{ paper.published_date }}
+                            </small>
+                            <small class="d-block">
+                                <i class="fas fa-hashtag me-1"></i>
+                                arXiv: {{ paper.arxiv_id }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-users me-2"></i>Authors
+                            </h5>
+                            <p class="mb-4">
+                                {% for author in paper.authors %}
+                                <span class="badge bg-light text-dark me-2 mb-2">{{ author }}</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-grid gap-2">
+                                <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" 
+                                   class="btn btn-primary" target="_blank">
+                                    <i class="fas fa-external-link-alt me-2"></i>
+                                    View on arXiv
+                                </a>
+                                <a href="https://arxiv.org/pdf/{{ paper.arxiv_id }}" 
+                                   class="btn btn-outline-primary" target="_blank">
+                                    <i class="fas fa-file-pdf me-2"></i>
+                                    Download PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paper Content -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Abstract -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-text me-2"></i>Abstract
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{{ paper.abstract }}</p>
+                </div>
+            </div>
+
+            <!-- Summary (if available) -->
+            {% if paper.summary %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-magic me-2"></i>AI-Generated Summary
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="markdown-content">
+                        {{ paper.summary | safe }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Paper Metadata -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Paper Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Categories:</strong>
+                        <div class="mt-2">
+                            {% for category in paper.categories %}
+                            <span class="badge bg-secondary me-1 mb-1">{{ category }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Published Date:</strong>
+                        <p class="mb-0">{{ paper.published_date }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>arXiv ID:</strong>
+                        <p class="mb-0 font-monospace">{{ paper.arxiv_id }}</p>
+                    </div>
+                    
+                    {% if paper.novelty_score %}
+                    <div class="mb-3">
+                        <strong>Novelty Score:</strong>
+                        <div class="d-flex align-items-center mt-2">
+                            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                <div class="progress-bar bg-success" 
+                                     style="width: {{ (paper.novelty_score / 10) * 100 }}%"></div>
+                            </div>
+                            <span class="fw-bold">{{ "%.1f"|format(paper.novelty_score) }}/10</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="copyToClipboard('{{ paper.arxiv_id }}')">
+                            <i class="fas fa-copy me-2"></i>Copy arXiv ID
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="sharePaper()">
+                            <i class="fas fa-share me-2"></i>Share Paper
+                        </button>
+                        <a href="{{ url_for('daily_summary', date=paper.published_date) }}" 
+                           class="btn btn-outline-info">
+                            <i class="fas fa-calendar-day me-2"></i>View Daily Summary
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Papers -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-link me-2"></i>Related Papers
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Papers from the same date or category will appear here.
+                    </p>
+                    <a href="{{ url_for('daily_summary', date=paper.published_date) }}" 
+                       class="btn btn-sm btn-outline-primary">
+                        View Same Day Papers
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Top -->
+    <div class="text-center mt-5">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        showAlert('success', 'arXiv ID copied to clipboard!');
+    }, function(err) {
+        showAlert('danger', 'Failed to copy to clipboard');
+    });
+}
+
+function sharePaper() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ paper.title }}',
+            text: 'Check out this interesting AI research paper!',
+            url: window.location.href
+        });
+    } else {
+        copyToClipboard(window.location.href);
+        showAlert('success', 'Paper URL copied to clipboard!');
+    }
+}
+</script>
+{% endblock %} 
