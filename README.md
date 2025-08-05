@@ -2,7 +2,7 @@
 
 A modern web application that automatically fetches, categorizes, and summarizes the latest AI research papers from arXiv. Stay updated with the most recent developments in artificial intelligence through daily blog-style summaries.
 
-## 🚀 Features
+## Features
 
 - **Automatic Paper Fetching**: Fetches latest AI research papers from arXiv
 - **Smart Filtering**: Filters papers based on relevance to AI/ML topics
@@ -13,7 +13,7 @@ A modern web application that automatically fetches, categorizes, and summarizes
 - **Real-time Updates**: Manual and automatic paper fetching
 - **Statistics**: Comprehensive analytics and insights
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 - **Backend**: Python Flask
 - **Database**: SQLite
@@ -21,12 +21,12 @@ A modern web application that automatically fetches, categorizes, and summarizes
 - **APIs**: arXiv API
 - **Styling**: Custom CSS with modern design principles
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - Python 3.8 or higher
 - pip (Python package installer)
 
-## 🚀 Installation
+##  Installation
 
 1. **Clone the repository**
    ```bash
@@ -54,7 +54,7 @@ A modern web application that automatically fetches, categorizes, and summarizes
    ARXIV_MAX_RESULTS=50
    ```
 
-## 🏃‍♂️ Running the Application
+##  Running the Application
 
 1. **Start the web application**
    ```bash
@@ -67,7 +67,7 @@ A modern web application that automatically fetches, categorizes, and summarizes
 3. **Fetch your first papers**
    Click the "Fetch Papers" button in the navigation bar to get the latest AI research papers
 
-## 📖 Usage
+## Usage
 
 ### Home Page
 - View the latest daily summary
@@ -89,7 +89,7 @@ A modern web application that automatically fetches, categorizes, and summarizes
 - `POST /api/fetch-papers`: Manually trigger paper fetching
 - `POST /api/generate-summary`: Generate daily summary for a specific date
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 ai-research-papers-summarizer/
@@ -115,7 +115,7 @@ ai-research-papers-summarizer/
 └── README.md             # This file
 ```
 
-## 🔧 Configuration
+## Configuration
 
 The application can be configured through environment variables or by modifying `config.py`:
 
@@ -125,7 +125,7 @@ The application can be configured through environment variables or by modifying 
 - `MAX_PAPERS_PER_SUMMARY`: Maximum papers to include in daily summaries
 - `PAPERS_PER_PAGE`: Number of papers to display per page
 
-## 📊 Database Schema
+## Database Schema
 
 ### Papers Table
 - `id`: Primary key
@@ -146,7 +146,7 @@ The application can be configured through environment variables or by modifying 
 - `paper_count`: Number of papers in summary
 - `created_at`: Creation timestamp
 
-## 🎯 Future Enhancements
+## Future Enhancements
 
 - **AI Summarization**: Integrate OpenAI GPT or similar for paper summarization
 - **Paper Categorization**: Automatic categorization of papers by topic
@@ -158,7 +158,7 @@ The application can be configured through environment variables or by modifying 
 - **Social Features**: Comments, likes, sharing
 - **Mobile App**: Native mobile application
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -166,20 +166,20 @@ The application can be configured through environment variables or by modifying 
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - arXiv.org for providing the research paper data
 - The AI research community for their valuable contributions
 - Bootstrap and Font Awesome for the beautiful UI components
 
-## 📞 Support
+## Support
 
 If you have any questions or need help, please open an issue on GitHub or contact the maintainers.
 
 ---
 
-**Happy exploring the latest AI research! 🧠✨**
+**Happy exploring the latest AI research!
