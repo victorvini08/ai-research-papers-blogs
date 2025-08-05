@@ -1,6 +1,6 @@
 # AI Research Papers Daily
 
-A modern web application that automatically fetches, categorizes, and summarizes the latest AI research papers from arXiv. Stay updated with the most recent developments in artificial intelligence through daily blog-style summaries.
+A modern web application that automatically fetches, categorizes, and summarizes the latest AI research papers from arXiv. Stay updated with the most recent developments in artificial intelligence through daily blog summaries.
 
 ## Features
 
