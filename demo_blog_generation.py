@@ -3,7 +3,7 @@
 Demo script to show automatic blog generation from recent papers
 """
 
-from src.paper_fetcher import PaperFetcher
+from src.arxiv_paper_fetcher import PaperFetcher
 from src.database import PaperDatabase
 from src.web_app import generate_blog_content
 from datetime import datetime

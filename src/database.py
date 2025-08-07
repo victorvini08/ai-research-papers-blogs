@@ -234,8 +234,14 @@ class PaperDatabase:
         conn.commit()
         conn.close()
     
-    def save_blog(self, title: str, content: str, summary: str, paper_count: int, categories: str, published_date: str):
+    def save_blog(self, blog_data):
         """Save a new blog post"""
+        title = blog_data['title']
+        content = blog_data['content']
+        summary = blog_data['summary']
+        paper_count = blog_data['paper_count']
+        categories = blog_data['categories']
+        published_date = blog_data['published_date']
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         

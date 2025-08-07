@@ -96,7 +96,8 @@ ai-research-papers-summarizer/
 ├── src/
 │   ├── __init__.py
 │   ├── web_app.py          # Flask web application
-│   ├── paper_fetcher.py    # arXiv paper fetching logic
+│   ├── arxiv_paper_fetcher.py    # arXiv paper fetching logic
+|   |── paperswithcode_fetcher.py # Paperswithcode paper fetching logic 
 │   ├── database.py         # Database operations
 │   ├── categorizer.py      # Paper categorization (future)
 │   └── summarizer.py       # AI summarization (future)

@@ -3,7 +3,7 @@
 Demo script to fetch papers and generate a summary
 """
 
-from src.paper_fetcher import PaperFetcher
+from src.arxiv_paper_fetcher import PaperFetcher
 from src.database import PaperDatabase
 from datetime import datetime
 import json
