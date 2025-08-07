@@ -3,7 +3,7 @@
 Script to create a sample blog post for testing
 """
 
-from src.paper_fetcher import PaperFetcher
+from src.arxiv_paper_fetcher import PaperFetcher
 from src.database import PaperDatabase
 from src.web_app import generate_blog_content, generate_blog_summary
 from datetime import datetime
