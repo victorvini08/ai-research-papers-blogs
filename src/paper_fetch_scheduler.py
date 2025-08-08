@@ -71,11 +71,11 @@ class PaperFetchScheduler:
         
         if saved_papers:
             blog_content = generate_blog_content(saved_papers)
-            blog_title = f"AI Research Roundup - Todays best research papers published in AI ({datetime.now().strftime('%Y-%m-%d')})"
+            blog_title = f"Latest AI Research Roundup - ({datetime.now().strftime('%Y-%m-%d')})"
             blog_data = {
                 'title': blog_title,
                 'content': blog_content,
-                'summary': f"Automatically generated blog for {datetime.now().strftime('%Y-%m-%d')}",
+                'summary': "Let's dive into the latest research papers published in AI today, summarized in an easy-to-read blog!",
                 'paper_count': len(saved_papers),
                 'categories': ', '.join(sorted(set([p.get('category', 'General AI') for p in saved_papers]))),
                 'published_date': datetime.now().strftime('%Y-%m-%d')
