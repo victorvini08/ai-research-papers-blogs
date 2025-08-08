@@ -201,7 +201,7 @@ def generate_blog_content(papers: List[Dict]) -> str:
 def get_category_info(category: str) -> Dict:
     """Get category-specific information for better presentation"""
     category_info = {
-        "Generative AI & Large Language Models (LLMs)": {
+        "Generative AI & LLMs": {
             "icon": "🤖",
             "description": "Breakthroughs in language models, text generation, and creative AI systems"
         },
