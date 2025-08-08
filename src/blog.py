@@ -114,10 +114,6 @@ def generate_blog_content(papers: List[Dict]) -> str:
                     <span class="stat-number">{len(categories)}</span>
                     <span class="stat-label">Categories</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-number">{sum(len(papers) for papers in categories.values())}</span>
-                    <span class="stat-label">Total</span>
-                </div>
             </div>
         </div>
     </div>
