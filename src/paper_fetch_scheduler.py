@@ -61,7 +61,6 @@ class PaperFetchScheduler:
                 unique_papers.append(paper)
         logger.info(f"Fetched {len(unique_papers)} unique papers across all categories.")
         # Save to database
-        return unique_papers
         saved_papers = []
         for paper in unique_papers:
             if not self.db.paper_exists(paper.get('arxiv_id')):
