@@ -17,7 +17,7 @@ class PaperFetchScheduler:
         self.scheduler = BackgroundScheduler()
         self.is_running = False
         self.category_queries = {
-            "Generative AI & Large Language Models (LLMs)": [
+            "Generative AI & LLMs": [
                 "large language model", "llm", "gpt", "transformer", "generative", "diffusion", "foundation model"
             ],
             "Computer Vision & MultiModal AI": [
@@ -26,8 +26,8 @@ class PaperFetchScheduler:
             "Agentic AI": [
                 "agent", "agentic", "autonomous agent", "multi-agent", "rl", "reinforcement learning"
             ],
-            "AI in Healthcare": [
-                "healthcare", "AI in healthcare", "biomedical"
+            "AI in healthcare": [
+                "healthcare", "drug discovery", "biomedical", "clinical"
             ],
             "Explainable & Ethical AI": [
                 "explainable", "interpretability", "fairness", "ethics", "responsible ai", "bias", "transparency"
@@ -61,6 +61,7 @@ class PaperFetchScheduler:
                 unique_papers.append(paper)
         logger.info(f"Fetched {len(unique_papers)} unique papers across all categories.")
         # Save to database
+        return unique_papers
         saved_papers = []
         for paper in unique_papers:
             if not self.db.paper_exists(paper.get('arxiv_id')):
