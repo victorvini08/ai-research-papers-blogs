@@ -204,8 +204,12 @@ class PaperFetcher:
         papers = []
         
         
-        # Build a search query that combines keywords with category restrictions
-        category_query = "cat:cs"
+        ai_categories = [
+            'cs.AI', 'cs.LG', 'cs.CL', 'cs.CV', 'cs.NE', 'cs.RO', 'cs.SE',
+            'stat.ML', 'cs.IR', 'cs.MA', 'cs.MM'
+        ]
+        
+        category_query = " OR ".join([f"cat:{cat}" for cat in ai_categories])
         keyword_query = " OR ".join([f"all:{kw}" for kw in keywords])
         
         # Combine keywords with category restrictions

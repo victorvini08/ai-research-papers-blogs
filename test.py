@@ -1,15 +1,19 @@
-from src.paper_fetcher import PaperFetcher
+import logging
+from src.paper_fetch_scheduler import PaperFetchScheduler
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler()  # Output to console
+    ]
+)
 
 def main():
-    paper_fetcher = PaperFetcher()
+    paper_fetcher = PaperFetchScheduler()
     
-    paper_data = {
-        'arxiv_id': '2507.23676v1',
-        'title': 'DepMicroDiff: Diffusion-Based Dependency-Aware Multimodal Imputation for Microbiome Data',
-        
-    }
-    paper_summary = paper_fetcher.summarize_paper(paper_data)
-    print(paper_summary)
+    papers = paper_fetcher.fetch_and_persist_papers()
+    print(papers)
     
 if __name__=='__main__':
     main()
