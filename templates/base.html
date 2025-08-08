@@ -22,6 +22,7 @@
             --bg-light: #f9fafb;
             --bg-white: #ffffff;
             --border-color: #e5e7eb;
+            --bg-title:rgb(14, 16, 19);
         }
         
         body {
@@ -291,12 +292,14 @@
         
         /* Enhanced Blog Styles */
         .blog-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
+            background: white;
+            color: #2d3748;
             padding: 3rem 2rem;
             border-radius: 16px;
             margin-bottom: 3rem;
             text-align: center;
+            border: 3px solid var(--accent-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
         .blog-title {
@@ -304,6 +307,8 @@
             font-weight: 700;
             margin-bottom: 1rem;
             line-height: 1.2;
+            color: #2d3748;
+            letter-spacing: -0.025em;
         }
         
         .blog-intro .lead {
@@ -328,6 +333,7 @@
             font-size: 2.5rem;
             font-weight: 700;
             line-height: 1;
+            color: var(--primary-color);
         }
         
         .stat-label {
@@ -335,6 +341,7 @@
             opacity: 0.8;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: var(--text-secondary);
         }
         
         .category-section {

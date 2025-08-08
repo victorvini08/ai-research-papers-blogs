@@ -18,7 +18,7 @@ class PaperFetchScheduler:
         self.is_running = False
         self.category_queries = {
             "Generative AI & LLMs": [
-                "large language model", "llm", "gpt", "transformer", "generative", "diffusion", "foundation model"
+                "large language model", "llm", "gpt", "transformer"
             ],
             "Computer Vision & MultiModal AI": [
                 "computer vision", "image", "vision", "multimodal", "multi-modal", "video", "segmentation"
@@ -91,7 +91,7 @@ class PaperFetchScheduler:
         try:
             self.scheduler.add_job(
                     func=self.fetch_and_persist_papers,
-                    trigger=CronTrigger(hour=15, minute=0,timezone='Asia/Kolkata'),
+                    trigger=CronTrigger(hour=15, minute=5,timezone='Asia/Kolkata'),
                     id='daily_paper_fetch',
                     name='Daily Research Papers Fetch',
                     replace_existing=True,
