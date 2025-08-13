@@ -5,7 +5,7 @@ Demo script to show automatic blog generation from recent papers
 
 from src.arxiv_paper_fetcher import PaperFetcher
 from src.database import PaperDatabase
-from src.web_app import generate_blog_content
+from src.blog import generate_blog_content
 from datetime import datetime
 import json
 
@@ -23,7 +23,7 @@ def demo_blog_generation():
     try:
         # Get recent papers from database
         recent_papers = db.get_recent_papers(days=30)
-        print("Recent paper summary: ",recent_papers[0]['summary'])
+        print("Recent paper summary: ",recent_papers[0].summary)
         print(f"✅ Found {len(recent_papers)} papers in database from last 30 days")
         
         if recent_papers:
@@ -34,9 +34,9 @@ def demo_blog_generation():
             # Show sample papers
             print("\n📄 Sample papers for blog:")
             for i, paper in enumerate(papers[:3]):
-                print(f"   {i+1}. {paper['title'][:60]}...")
-                print(f"      Authors: {', '.join(paper['authors'][:2])}{'...' if len(paper['authors']) > 2 else ''}")
-                print(f"      Date: {paper['published_date']}")
+                print(f"   {i+1}. {paper.title[:60]}...")
+                print(f"      Authors: {', '.join(paper.authors[:2])}{'...' if len(paper.authors) > 2 else ''}")
+                print(f"      Date: {paper.published_data}")
                 print()
             
             print("\n2. Generating blog content automatically...")
@@ -61,7 +61,7 @@ def demo_blog_generation():
             print("\n📊 Blog Statistics:")
             categories = {}
             for paper in papers:
-                category = paper.get('category', 'General AI')
+                category = paper.category or 'General AI'
                 if category not in categories:
                     categories[category] = 0
                 categories[category] += 1
@@ -71,7 +71,7 @@ def demo_blog_generation():
             
             all_authors = []
             for paper in papers:
-                for author in paper['authors']:
+                for author in paper.authors:
                     if author not in all_authors:
                         all_authors.append(author)
             

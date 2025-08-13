@@ -2,6 +2,19 @@ import sqlite3
 import json
 from datetime import datetime
 from typing import List, Dict, Optional
+from .paper import Paper
+
+def _parse_summary_field(summary_field):
+    """Helper function to parse summary field from database"""
+    if not summary_field:
+        return None
+    try:
+        if summary_field.startswith('{'):
+            return json.loads(summary_field)
+        else:
+            return summary_field
+    except (json.JSONDecodeError, AttributeError):
+        return summary_field
 
 class PaperDatabase:
     def __init__(self, db_path: str = "database/papers.db"):
@@ -26,6 +39,7 @@ class PaperDatabase:
                 summary TEXT,
                 category TEXT,
                 novelty_score REAL,
+                source TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -67,6 +81,16 @@ class PaperDatabase:
             )
         ''')
         
+        # Subscribers table for email notifications
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS subscribers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1
+            )
+        ''')
+        
         conn.commit()
         conn.close()
     
@@ -79,7 +103,7 @@ class PaperDatabase:
         conn.close()
         return exists
     
-    def insert_paper(self, paper_data: Dict) -> bool:
+    def insert_paper(self, paper: Paper) -> bool:
         """Insert a new paper into the database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -88,18 +112,19 @@ class PaperDatabase:
             cursor.execute('''
                 INSERT INTO papers (
                     arxiv_id, title, authors, abstract, categories, 
-                    published_date, summary, category, novelty_score
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    published_date, summary, category, novelty_score, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                paper_data['arxiv_id'],
-                paper_data['title'],
-                json.dumps(paper_data['authors']),
-                paper_data['abstract'],
-                json.dumps(paper_data['categories']),
-                paper_data['published_date'],
-                paper_data.get('summary', ''),
-                paper_data.get('category', ''),
-                paper_data.get('novelty_score', 0.0)
+                paper.arxiv_id,
+                paper.title,
+                json.dumps(paper.authors),
+                paper.abstract,
+                json.dumps(paper.categories),
+                paper.published_data,
+                json.dumps(paper.summary) if isinstance(paper.summary, dict) else (paper.summary or ''),
+                paper.category or '',
+                paper.novelty_score or 0.0,
+                paper.source or 'arxiv'
             ))
             
             conn.commit()
@@ -112,14 +137,48 @@ class PaperDatabase:
             print(f"Error inserting paper: {e}")
             return False
     
-    def get_papers_by_date(self, date: str) -> List[Dict]:
+    def insert_paper_dict(self, paper_data: Dict) -> bool:
+        """Insert a new paper from dictionary (for backward compatibility)"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO papers (
+                    arxiv_id, title, authors, abstract, categories, 
+                    published_date, summary, category, novelty_score, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                paper_data['arxiv_id'],
+                paper_data['title'],
+                json.dumps(paper_data['authors']),
+                paper_data['abstract'],
+                json.dumps(paper_data['categories']),
+                paper_data['published_date'],
+                paper_data.get('summary', ''),
+                paper_data.get('category', ''),
+                paper_data.get('novelty_score', 0.0),
+                paper_data.get('source', 'arxiv')
+            ))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except sqlite3.IntegrityError:
+            # Paper already exists
+            return False
+        except Exception as e:
+            print(f"Error inserting paper: {e}")
+            return False
+    
+    def get_papers_by_date(self, date: str) -> List[Paper]:
         """Get all papers published on a specific date"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
             SELECT arxiv_id, title, authors, abstract, categories, 
-                   published_date, summary, category, novelty_score
+                   published_date, summary, category, novelty_score, source
             FROM papers 
             WHERE DATE(published_date) = ?
             ORDER BY novelty_score DESC
@@ -127,29 +186,33 @@ class PaperDatabase:
         
         papers = []
         for row in cursor.fetchall():
-            papers.append({
-                'arxiv_id': row[0],
-                'title': row[1],
-                'authors': json.loads(row[2]),
-                'abstract': row[3],
-                'categories': json.loads(row[4]),
-                'published_date': row[5],
-                'summary': row[6],
-                'category': row[7],
-                'novelty_score': row[8]
-            })
+            paper = Paper(
+                arxiv_id=row[0],
+                title=row[1],
+                authors=json.loads(row[2]),
+                abstract=row[3],
+                categories=json.loads(row[4]),
+                published_data=row[5],
+                pdf_url=f"https://arxiv.org/pdf/{row[0]}",
+                entry_id=f"https://arxiv.org/abs/{row[0]}",
+                summary=_parse_summary_field(row[6]),
+                category=row[7],
+                novelty_score=row[8],
+                source=row[9]
+            )
+            papers.append(paper)
         
         conn.close()
         return papers
     
-    def get_recent_papers(self, days: int = 7) -> List[Dict]:
+    def get_recent_papers(self, days: int = 7) -> List[Paper]:
         """Get papers from the last N days"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
             SELECT arxiv_id, title, authors, abstract, categories, 
-                   published_date, summary, category, novelty_score
+                   published_date, summary, category, novelty_score, source
             FROM papers 
             WHERE DATE(published_date) >= DATE('now', '-{} days')
             ORDER BY published_date DESC, novelty_score DESC
@@ -157,17 +220,21 @@ class PaperDatabase:
         
         papers = []
         for row in cursor.fetchall():
-            papers.append({
-                'arxiv_id': row[0],
-                'title': row[1],
-                'authors': json.loads(row[2]),
-                'abstract': row[3],
-                'categories': json.loads(row[4]),
-                'published_date': row[5],
-                'summary': row[6],
-                'category': row[7],
-                'novelty_score': row[8]
-            })
+            paper = Paper(
+                arxiv_id=row[0],
+                title=row[1],
+                authors=json.loads(row[2]),
+                abstract=row[3],
+                categories=json.loads(row[4]),
+                published_data=row[5],
+                pdf_url=f"https://arxiv.org/pdf/{row[0]}",
+                entry_id=f"https://arxiv.org/abs/{row[0]}",
+                summary=_parse_summary_field(row[6]),
+                category=row[7],
+                novelty_score=row[8],
+                source=row[9]
+            )
+            papers.append(paper)
         
         conn.close()
         return papers
@@ -177,11 +244,14 @@ class PaperDatabase:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # Convert summary to JSON if it's a dictionary
+        summary_json = json.dumps(summary) if isinstance(summary, dict) else summary
+        
         cursor.execute('''
             UPDATE papers 
             SET summary = ?, category = ?, novelty_score = ?, updated_at = CURRENT_TIMESTAMP
             WHERE arxiv_id = ?
-        ''', (summary, category, novelty_score, arxiv_id))
+        ''', (summary_json, category, novelty_score, arxiv_id))
         
         conn.commit()
         conn.close()
@@ -234,14 +304,55 @@ class PaperDatabase:
         conn.commit()
         conn.close()
     
-    def save_blog(self, blog_data):
+    def save_subscriber_email(self, email: str) -> bool:
+        """Save a new subscriber email"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO subscribers (email, subscribed_at, is_active)
+                VALUES (?, CURRENT_TIMESTAMP, 1)
+            ''', (email,))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error saving subscriber email: {e}")
+            return False
+    
+    def get_all_subscriber_emails(self) -> List[str]:
+        """Get all active subscriber emails"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT email FROM subscribers WHERE is_active = 1')
+        emails = [row[0] for row in cursor.fetchall()]
+        
+        conn.close()
+        return emails
+    
+    def unsubscribe_email(self, email: str) -> bool:
+        """Unsubscribe an email address"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE subscribers SET is_active = 0 WHERE email = ?
+            ''', (email,))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error unsubscribing email: {e}")
+            return False
+    
+    def save_blog(self, title, content, summary, paper_count, categories, published_date):
         """Save a new blog post"""
-        title = blog_data['title']
-        content = blog_data['content']
-        summary = blog_data['summary']
-        paper_count = blog_data['paper_count']
-        categories = blog_data['categories']
-        published_date = blog_data['published_date']
+      
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         

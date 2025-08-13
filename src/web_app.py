@@ -1,6 +1,9 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from datetime import datetime, timedelta
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from .arxiv_paper_fetcher import PaperFetcher
 from .paper_fetch_scheduler import paper_scheduler, initialize_scheduler, shutdown_scheduler
@@ -33,19 +36,21 @@ def index():
                          blogs=blogs,
                          papers=papers)
 
-@app.route('/daily/<date>')
-def daily_summary(date):
-    """View daily summary for a specific date"""
-    daily_summary = db.get_daily_summary(date)
-    papers = db.get_papers_by_date(date)
+@app.route('/daily-summary')
+def daily_summary():
+    """Show daily summary of papers"""
+    today = datetime.now().strftime('%Y-%m-%d')
+    papers = db.get_papers_by_date(today)
     
-    if not daily_summary:
-        return render_template('404.html', message="No summary found for this date"), 404
+    if not papers:
+        return render_template('daily_summary.html', 
+                             papers=[], 
+                             date=today,
+                             message="No papers found for today.")
     
     return render_template('daily_summary.html', 
-                         daily_summary=daily_summary,
-                         papers=papers,
-                         summary_date=date)
+                         papers=papers, 
+                         date=today)
 
 @app.route('/paper/<arxiv_id>')
 def paper_detail(arxiv_id):
@@ -55,7 +60,7 @@ def paper_detail(arxiv_id):
     cursor = conn.cursor()
     cursor.execute('''
         SELECT arxiv_id, title, authors, abstract, categories, 
-               published_date, summary, category, novelty_score
+               published_date, summary, category, novelty_score, source
         FROM papers 
         WHERE arxiv_id = ?
     ''', (arxiv_id,))
@@ -75,7 +80,8 @@ def paper_detail(arxiv_id):
         'published_date': row[5],
         'summary': row[6],
         'category': row[7],
-        'novelty_score': row[8]
+        'novelty_score': row[8],
+        'source': row[9]
     }
     
     return render_template('paper_detail.html', paper=paper)
@@ -94,6 +100,134 @@ def blog_detail(blog_id):
         return render_template('404.html', message="Blog post not found"), 404
     
     return render_template('blog_detail.html', blog=blog)
+
+@app.route('/papers')
+def papers_list():
+    """View list of all research papers"""
+    # Get all papers ordered by recency
+    papers = db.get_recent_papers(days=365)  # Get papers from last year
+    return render_template('papers_list.html', papers=papers)
+
+@app.route('/subscribe', methods=['POST'])
+def subscribe_email():
+    """Handle email subscription"""
+    email = request.form.get('email')
+    
+    if not email:
+        flash('Please provide a valid email address.', 'error')
+        return redirect(url_for('index'))
+    
+    try:
+        # Save email to database (you'll need to create this table)
+        db.save_subscriber_email(email)
+        flash('Thank you for subscribing! You\'ll receive our weekly AI research updates.', 'success')
+    except Exception as e:
+        flash('There was an error processing your subscription. Please try again.', 'error')
+        app.logger.error(f"Email subscription error: {e}")
+    
+    return redirect(url_for('index'))
+
+@app.route('/send-weekly-email')
+def send_weekly_email():
+    """Send weekly blog email to all subscribers"""
+    try:
+        # Get the latest blog
+        blogs = db.get_all_blogs()
+        if not blogs:
+            return jsonify({'success': False, 'message': 'No blogs found'})
+        
+        latest_blog = blogs[0]  # Most recent blog
+        
+        # Get all subscriber emails
+        subscribers = db.get_all_subscriber_emails()
+        
+        if not subscribers:
+            return jsonify({'success': False, 'message': 'No subscribers found'})
+        
+        # Send email to each subscriber
+        sent_count = 0
+        for subscriber_email in subscribers:
+            if send_blog_email(subscriber_email, latest_blog):
+                sent_count += 1
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Weekly blog email sent to {sent_count} subscribers',
+            'sent_count': sent_count,
+            'total_subscribers': len(subscribers)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Weekly email error: {e}")
+        return jsonify({'success': False, 'message': f'Error sending emails: {str(e)}'}), 500
+
+@app.route('/unsubscribe')
+def unsubscribe():
+    """Handle email unsubscription"""
+    email = request.args.get('email')
+    
+    if not email:
+        flash('Invalid unsubscribe link.', 'error')
+        return redirect(url_for('index'))
+    
+    try:
+        db.unsubscribe_email(email)
+        flash('You have been successfully unsubscribed from our weekly updates.', 'success')
+    except Exception as e:
+        flash('There was an error processing your unsubscription. Please try again.', 'error')
+        app.logger.error(f"Email unsubscription error: {e}")
+    
+    return redirect(url_for('index'))
+
+def send_blog_email(subscriber_email: str, blog: Dict) -> bool:
+    """Send a single blog email to a subscriber"""
+    try:
+        # Email configuration (you'll need to set these environment variables)
+        smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_username = os.environ.get('SMTP_USERNAME')
+        smtp_password = os.environ.get('SMTP_PASSWORD')
+        
+        if not all([smtp_username, smtp_password]):
+            app.logger.error("SMTP credentials not configured")
+            return False
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"AI Research Daily - {blog['title']}"
+        msg['From'] = smtp_username
+        msg['To'] = subscriber_email
+        
+        # Create HTML content
+        html_content = f"""
+        <html>
+        <body>
+            <h2>AI Research Daily - Weekly Update</h2>
+            <h3>{blog['title']}</h3>
+            <p><strong>Published:</strong> {blog['published_date']}</p>
+            <p><strong>Papers Covered:</strong> {blog['paper_count']}</p>
+            <hr>
+            <div>{blog['summary']}</div>
+            <hr>
+            <p>Read the full blog post: <a href="{request.host_url}blog/{blog['id']}">Click here</a></p>
+            <p>Unsubscribe: <a href="{request.host_url}unsubscribe?email={subscriber_email}">Click here</a></p>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Send email
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        
+        return True
+        
+    except Exception as e:
+        app.logger.error(f"Error sending email to {subscriber_email}: {e}")
+        return False
 
 @app.route('/archive')
 def archive():

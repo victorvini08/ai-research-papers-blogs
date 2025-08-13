@@ -6,6 +6,7 @@ A modern web application that automatically fetches, categorizes, and summarizes
 
 - **Automatic Paper Fetching**: Fetches latest AI research papers from arXiv
 - **Smart Filtering**: Filters papers based on relevance to AI/ML topics
+- **LLM Summarization**: Uses Ollama with Llama3 to generate intelligent research paper summaries
 - **Daily Summaries**: Generates blog-style summaries of research papers
 - **Beautiful UI**: Modern, responsive web interface
 - **Paper Details**: Detailed view of individual research papers
@@ -45,7 +46,18 @@ A modern web application that automatically fetches, categorizes, and summarizes
    pip install -r requirements.txt
    ```
 
-4. **Set up environment variables** (optional)
+4. **Install and setup Ollama** (required for LLM summarization)
+   - Visit [https://ollama.ai](https://ollama.ai) and install Ollama for your platform
+   - Run the setup script to install the Llama3 model:
+   ```bash
+   python3 setup_ollama.py
+   ```
+   - Start the Ollama server (keep this running):
+   ```bash
+   ollama serve
+   ```
+
+5. **Set up environment variables** (optional)
    Create a `.env` file in the root directory:
    ```env
    SECRET_KEY=your-secret-key-here

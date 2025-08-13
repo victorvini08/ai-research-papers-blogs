@@ -2,8 +2,8 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from .arxiv_paper_fetcher import PaperFetcher
-from .paperswithcode_fetcher import PapersWithCodeFetcher
 from .database import PaperDatabase
+from .llm_summarizer import LLMSummarizer
 from datetime import datetime, timedelta
 from .blog import generate_blog_content
 logger = logging.getLogger(__name__)
@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 class PaperFetchScheduler: 
     def __init__(self):
         self.paper_fetcher = PaperFetcher()
-        self.pwc_fetcher = PapersWithCodeFetcher()
         self.db = PaperDatabase()
+        self.llm_summarizer = LLMSummarizer()
         self.scheduler = BackgroundScheduler()
         self.is_running = False
         self.category_queries = {
@@ -42,20 +42,20 @@ class PaperFetchScheduler:
             # Fetch from arXiv
             arxiv_papers = self.paper_fetcher.fetch_papers_by_category(keywords, max_results=max_per_category)
             for paper in arxiv_papers:
-                paper['category'] = category
-                paper['source'] = 'arxiv'
+                paper.category = category
+                paper.source = 'arxiv'
             # Fetch from PapersWithCode
             # pwc_papers = self.pwc_fetcher.fetch_papers_by_category(keywords, max_results=max_per_category)
             # for paper in pwc_papers:
-            #     paper['category'] = category
-            #     paper['source'] = 'paperswithcode'
+            #     paper.category = category
+            #     paper.source = 'paperswithcode'
             all_papers.extend(arxiv_papers)
             #all_papers.extend(pwc_papers)
         # Deduplicate by arxiv_id or title
         seen = set()
         unique_papers = []
         for paper in all_papers:
-            key = paper.get('arxiv_id') or paper.get('title')
+            key = paper.arxiv_id or paper.title
             if key and key not in seen:
                 seen.add(key)
                 unique_papers.append(paper)
@@ -63,25 +63,34 @@ class PaperFetchScheduler:
         # Save to database
         saved_papers = []
         for paper in unique_papers:
-            if not self.db.paper_exists(paper.get('arxiv_id')):
+            if not self.db.paper_exists(paper.arxiv_id):
+                paper_summary = paper.get_summary()
+                llm_paper_summary = self.llm_summarizer.summarize_paper(paper_summary, paper)
+                paper.summary = llm_paper_summary
                 self.db.insert_paper(paper)
                 saved_papers.append(paper)
         logger.info(f"Saved {len(saved_papers)} new papers to database.")
         
+        # Generate blog content if we have papers
         if saved_papers:
-            blog_content = generate_blog_content(saved_papers)
-            blog_title = f"Latest AI Research Roundup - ({datetime.now().strftime('%Y-%m-%d')})"
-            blog_data = {
-                'title': blog_title,
-                'content': blog_content,
-                'summary': "Let's dive into the latest research papers published in AI today, summarized in an easy-to-read blog!",
-                'paper_count': len(saved_papers),
-                'categories': ', '.join(sorted(set([p.get('category', 'General AI') for p in saved_papers]))),
-                'published_date': datetime.now().strftime('%Y-%m-%d')
-            }
-            self.db.save_blog(blog_data)
-            logger.info(f"Generated and saved blog for {datetime.now().strftime('%Y-%m-%d')} with {len(saved_papers)} papers.")
-        # Continue with LLM summarization and blog generation as before, grouping by category...
+            try:
+                blog_content = generate_blog_content(saved_papers)
+                blog_title = f"Latest AI Research Papers - {datetime.now().strftime('%B %d, %Y')}"
+                blog_summary = f"Discover the latest {len(saved_papers)} AI research papers across {len(set(p.category for p in saved_papers))} categories."
+                
+                self.db.save_blog(
+                    title=blog_title,
+                    content=blog_content,
+                    summary=blog_summary,
+                    paper_count=len(saved_papers),
+                    categories=", ".join(set(p.category for p in saved_papers)),
+                    published_date=datetime.now().strftime('%Y-%m-%d')
+                )
+                logger.info(f"Generated and saved blog post with {len(saved_papers)} papers.")
+            except Exception as e:
+                logger.error(f"Error generating blog content: {e}")
+        else:
+            logger.info("No new papers to generate blog content for.")
     
     def start(self):
         if self.is_running: 
@@ -91,9 +100,9 @@ class PaperFetchScheduler:
         try:
             self.scheduler.add_job(
                     func=self.fetch_and_persist_papers,
-                    trigger=CronTrigger(hour=15, minute=5,timezone='Asia/Kolkata'),
-                    id='daily_paper_fetch',
-                    name='Daily Research Papers Fetch',
+                    trigger=CronTrigger(day_of_week='thu',hour=8, minute=0,timezone='Asia/Kolkata'),
+                    id='weekly_paper_fetch',
+                    name='Weekly Research Papers Fetch',
                     replace_existing=True,
                     max_instances=1,  # Prevent overlapping jobs
                     misfire_grace_time=3600  # Allow 1 hour grace period

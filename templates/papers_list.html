@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}All Research Papers - AI Research Daily{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header bg-primary text-white py-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">
+                    <i class="fas fa-file-alt me-3"></i>
+                    All Research Papers
+                </h1>
+                <p class="lead mb-0">
+                    Browse through our complete collection of AI research papers with AI-powered summaries
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <span class="badge bg-light text-primary fs-6">
+                        <i class="fas fa-database me-2"></i>
+                        {{ papers|length }} Papers
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Papers Grid -->
+<div class="container py-5">
+    {% if papers %}
+    <!-- Papers Grid -->
+    <div class="row g-4">
+        {% for paper in papers %}
+        <div class="col-lg-6 col-xl-4">
+            <div class="card paper-card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title fw-bold mb-2">
+                                <a href="{{ url_for('paper_detail', arxiv_id=paper.arxiv_id) }}" class="text-decoration-none">
+                                    {{ paper.title[:80] }}{% if paper.title|length > 80 %}...{% endif %}
+                                </a>
+                            </h5>
+                        </div>
+                        {% if paper.novelty_score %}
+                        <span class="novelty-score ms-2">
+                            {{ "%.1f"|format(paper.novelty_score) }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <span class="category-badge me-2">
+                            {{ paper.category or 'AI/ML' }}
+                        </span>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ paper.published_data }}
+                        </small>
+                    </div>
+                    
+                    <p class="card-text text-muted mb-3">
+                        {{ paper.abstract[:200] }}{% if paper.abstract|length > 200 %}...{% endif %}
+                    </p>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-users me-1"></i>
+                            {{ paper.authors[:3]|join(', ') }}{% if paper.authors|length > 3 %} et al.{% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" 
+                           class="btn btn-primary btn-sm" target="_blank">
+                            <i class="fas fa-external-link-alt me-1"></i>
+                            Read Paper
+                        </a>
+                        <a href="{{ url_for('paper_detail', arxiv_id=paper.arxiv_id) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <div class="card-body">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted mb-3">No Papers Found</h4>
+                    <p class="text-muted mb-4">
+                        No research papers are available in the database yet. Papers are automatically fetched and updated in the background.
+                    </p>
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-home me-2"></i>
+                            Back to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

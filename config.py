@@ -42,3 +42,9 @@ class Config:
     # Web app settings
     PAPERS_PER_PAGE = int(os.environ.get('PAPERS_PER_PAGE', '12'))
     SUMMARIES_PER_PAGE = int(os.environ.get('SUMMARIES_PER_PAGE', '10'))
+    
+    # PDF download settings
+    PDF_DOWNLOAD_TIMEOUT = int(os.environ.get('PDF_DOWNLOAD_TIMEOUT', '45'))
+    PDF_DOWNLOAD_MAX_RETRIES = int(os.environ.get('PDF_DOWNLOAD_MAX_RETRIES', '3'))
+    PDF_DOWNLOAD_RETRY_DELAYS = [2, 5, 10]  # seconds
+    PDF_MIN_SIZE_KB = int(os.environ.get('PDF_MIN_SIZE_KB', '1'))

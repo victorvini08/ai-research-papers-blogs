@@ -1,7 +1,10 @@
 from typing import List, Dict
 from datetime import datetime
+from .paper import Paper
+from .llm_summarizer import LLMSummarizer
+import markdown2
 
-def generate_daily_summary_content(papers: List[Dict], date: str) -> str:
+def generate_daily_summary_content(papers: List[Paper], date: str) -> str:
     """Generate the content for a daily summary"""
     content = f"# AI Research Papers Summary - {date}\n\n"
     content += f"Today we have **{len(papers)}** interesting AI research papers to share with you. "
@@ -10,7 +13,7 @@ def generate_daily_summary_content(papers: List[Dict], date: str) -> str:
     # Group papers by category
     categories = {}
     for paper in papers:
-        category = paper.get('category', 'General AI')
+        category = paper.category or 'General AI'
         if category not in categories:
             categories[category] = []
         categories[category].append(paper)
@@ -19,23 +22,23 @@ def generate_daily_summary_content(papers: List[Dict], date: str) -> str:
         content += f"## {category}\n\n"
         
         for paper in category_papers[:3]:  # Limit to 3 papers per category
-            content += f"### {paper['title']}\n\n"
-            content += f"**Authors:** {', '.join(paper['authors'][:3])}{'...' if len(paper['authors']) > 3 else ''}\n\n"
+            content += f"### {paper.title}\n\n"
+            content += f"**Authors:** {', '.join(paper.authors[:3])}{'...' if len(paper.authors) > 3 else ''}\n\n"
             
             # Use summary if available, otherwise use abstract
-            summary_text = paper.get('summary', paper['abstract'])
+            summary_text = paper.summary or paper.abstract
             if len(summary_text) > 300:
                 summary_text = summary_text[:300] + "..."
             
             content += f"{summary_text}\n\n"
-            content += f"[Read Full Paper](https://arxiv.org/abs/{paper['arxiv_id']})\n\n"
+            content += f"[Read Full Paper](https://arxiv.org/abs/{paper.arxiv_id})\n\n"
             content += "---\n\n"
     
     content += "\n*This summary was automatically generated. For more details, click on the paper links above.*"
     
     return content
 
-def generate_blog_summary(papers: List[Dict]) -> str:
+def generate_blog_summary(papers: List[Paper]) -> str:
     """Generate a concise blog summary for the home page"""
     if not papers:
         return "No recent papers available."
@@ -43,7 +46,7 @@ def generate_blog_summary(papers: List[Dict]) -> str:
     # Get unique categories
     categories = set()
     for paper in papers:
-        category = paper.get('category', 'General AI')
+        category = paper.category or 'General AI'
         categories.add(category)
     
     # Create a summary
@@ -57,15 +60,15 @@ def generate_blog_summary(papers: List[Dict]) -> str:
     # Highlight top 3 papers
     summary += "<h2>Key Highlights</h2>\n\n"
     for i, paper in enumerate(papers[:3], 1):
-        title = paper['title']
+        title = paper.title
         if len(title) > 80:
             title = title[:80] + "..."
         
         summary += f"<h3>{i}. {title}</h3>\n"
-        summary += f"<p><em>By {', '.join(paper['authors'][:2])}{'...' if len(paper['authors']) > 2 else ''}</em></p>\n\n"
+        summary += f"<p><em>By {', '.join(paper.authors[:2])}{'...' if len(paper.authors) > 2 else ''}</em></p>\n\n"
         
         # Brief abstract excerpt
-        abstract = paper['abstract']
+        abstract = paper.abstract
         if len(abstract) > 150:
             abstract = abstract[:150] + "..."
         summary += f"<p>{abstract}</p>\n\n"
@@ -78,120 +81,142 @@ def generate_blog_summary(papers: List[Dict]) -> str:
     
     return summary
 
-def generate_blog_content(papers: List[Dict]) -> str:
+def render_structured_summary(summary_dict):
+    """Render structured LLM summary in a 2x2 grid layout"""
+    # Section display order and icons for 2x2 grid
+    section_order = [
+        ("key problem", "🧩", "Key Problem"),
+        ("problem", "🧩", "Problem"),
+        ("main problem", "🧩", "Main Problem"),
+        ("challenge", "🧩", "Challenge"),
+        ("key innovation", "💡", "Key Innovation"),
+        ("innovation", "💡", "Innovation"),
+        ("novelty", "💡", "Novelty"),
+        ("contribution", "💡", "Contribution"),
+        ("practical impact", "🌍", "Practical Impact"),
+        ("impact", "🌍", "Impact"),
+        ("real-world impact", "🌍", "Real-world Impact"),
+        ("implications", "🌍", "Implications"),
+        ("analogy", "🔍", "Analogy"),
+        ("intuitive explanation", "🔍", "Intuitive Explanation"),
+        ("analogy / intuitive explanation", "🔍", "Analogy / Intuitive Explanation"),
+    ]
+    # Lowercase keys for matching
+    summary_keys = {k.lower(): k for k in summary_dict.keys()}
+    html = '<div class="llm-summary-grid">'
+    shown = set()
+    for key, icon, label in section_order:
+        if key in summary_keys and key not in shown:
+            section_content = summary_dict[summary_keys[key]].strip()
+            if section_content:
+                html += f'''<div class="summary-section">
+                    <h4>{icon} {label}</h4>
+                    <div>{markdown2.markdown(section_content)}</div>
+                </div>'''
+                shown.add(key)
+    # Render any extra sections not in the order
+    for k, v in summary_dict.items():
+        lk = k.lower()
+        if lk not in shown and lk != "summary" and v.strip():
+            html += f'''<div class="summary-section">
+                <h4>📝 {k.title()}</h4>
+                <div>{markdown2.markdown(v.strip())}</div>
+            </div>'''
+    # If only a generic 'summary' key, show it
+    if not shown and "summary" in summary_dict:
+        html += f'<div class="summary-section">{markdown2.markdown(summary_dict["summary"])}</div>'
+    html += '</div>'
+    return html
+
+def generate_blog_content(papers: List[Paper]) -> str:
     """Generate engaging blog content from recent papers"""
     if not papers:
         return "<h1>No Papers Available</h1><p>No recent papers are available at the moment.</p>"
     
-    # Get current date for the blog
     current_date = datetime.now().strftime('%B %d, %Y')
-    
-    # Group papers by category
     categories = {}
     for paper in papers:
-        category = paper.get('category', 'General AI')
+        category = paper.category or 'General AI'
         if category not in categories:
             categories[category] = []
         categories[category].append(paper)
     
-    # Start building the blog content
     content = f"""
     <div class="blog-header">
-        <h1 class="blog-title">🚀 AI Research Roundup: {current_date}</h1>
+        <h1 class="blog-title"> AI Research Roundup: {current_date}</h1>
         <div class="blog-intro">
-            <p class="lead">
-                Welcome to today's AI research digest! We've curated <strong>{len(papers)}</strong> 
-                cutting-edge papers that are pushing the boundaries of artificial intelligence. 
-                From breakthrough algorithms to innovative applications, here's what's happening 
-                at the forefront of AI research.
-            </p>
-            <div class="stats-banner">
-                <div class="stat-item">
-                    <span class="stat-number">{len(papers)}</span>
-                    <span class="stat-label">Papers</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">{len(categories)}</span>
-                    <span class="stat-label">Categories</span>
-                </div>
+            <p class="lead">Discover the latest breakthroughs in artificial intelligence with our curated selection of top cutting-edge research papers of this week.</p>
+        </div>
+        <div class="stats-banner">
+            <div class="stat-item">
+                <span class="stat-number">{len(papers)}</span>
+                <span class="stat-label">Papers</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{len(categories)}</span>
+                <span class="stat-label">Categories</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{len(set([author for paper in papers for author in paper.authors]))}</span>
+                <span class="stat-label">Researchers</span>
             </div>
         </div>
     </div>
     """
-    
-    # Add category sections
     for category, category_papers in categories.items():
-        # Get category icon and description
         category_info = get_category_info(category)
-        
         content += f"""
         <div class="category-section">
             <div class="category-header">
-                <h2 class="category-title">
-                    {category_info['icon']} {category}
-                </h2>
+                <h2 class="category-title">{category_info['icon']} {category}</h2>
                 <p class="category-description">{category_info['description']}</p>
             </div>
         """
-        
         for i, paper in enumerate(category_papers, 1):
-            # Create an engaging paper card
+            summary_html = ""
+            if paper.summary:
+                if isinstance(paper.summary, dict):
+                    summary_html = render_structured_summary(paper.summary)
+                else:
+                    summary_html = f'<div class="llm-summary"><div class="summary-section">{markdown2.markdown(paper.summary)}</div></div>'
+            else:
+                summary_html = f'<p class="paper-abstract">{paper.abstract}</p>'
+            authors_text = ', '.join(paper.authors[:3])
+            if len(paper.authors) > 3:
+                authors_text += f" et al. ({len(paper.authors)} authors)"
             content += f"""
             <div class="paper-card">
                 <div class="paper-header">
-                    <div class="paper-number">#{i}</div>
-                    <h3 class="paper-title">{paper['title']}</h3>
+                    <div class="paper-number">{i}</div>
+                    <div class="paper-info">
+                        <h3 class="paper-title">{paper.title}</h3>
+                        <p class="paper-authors">By {authors_text}</p>
+                        <div class="paper-meta">
+                            <span class="category-badge">{paper.category}</span>
+                            <span class="paper-date">{paper.published_data}</span>
+                            {f'<span class="novelty-score">Novelty: {paper.novelty_score:.1f}</span>' if paper.novelty_score else ''}
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="paper-authors">
-                    <i class="fas fa-users"></i>
-                    <span>{', '.join(paper['authors'][:3])}{'...' if len(paper['authors']) > 3 else ''}</span>
-                </div>
-                
-                <div class="paper-abstract">
-                    <p>{paper['abstract']}</p>
-                </div>
-                
-                <div class="paper-actions">
-                    <a href="https://arxiv.org/abs/{paper['arxiv_id']}" 
-                       class="btn btn-primary btn-sm" target="_blank">
-                        <i class="fas fa-external-link-alt"></i> Read Paper
-                    </a>
-                    <a href="https://arxiv.org/pdf/{paper['arxiv_id']}" 
-                       class="btn btn-outline-secondary btn-sm" target="_blank">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </a>
-                    <span class="paper-date">
-                        <i class="fas fa-calendar"></i> {paper['published_date']}
-                    </span>
+                <div class="paper-content">
+                    {summary_html}
+                    <div class="paper-actions">
+                        <a href="https://arxiv.org/abs/{paper.arxiv_id}" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> Read Paper
+                        </a>
+                        <a href="https://arxiv.org/pdf/{paper.arxiv_id}" class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </a>
+                    </div>
                 </div>
             </div>
             """
-        
         content += "</div>"
-    
-    # Add conclusion
-    content += f"""
-    <div class="blog-conclusion">
-        <h3>🎯 What's Next?</h3>
-        <p>
-            These papers represent just a snapshot of the incredible work happening in AI research. 
-            Each one contributes to our understanding and capabilities in artificial intelligence, 
-            bringing us closer to more intelligent, efficient, and beneficial AI systems.
-        </p>
-        <p>
-            <strong>Stay tuned for more updates!</strong> We'll continue to bring you the latest 
-            developments in AI research, helping you stay informed about the technologies that 
-            are shaping our future.
-        </p>
-    </div>
-    
+    content += """
     <div class="blog-footer">
-        <p><em>This blog was automatically generated from the latest AI research papers. 
-        For more details and full papers, click on the links above.</em></p>
+        <p><em>This blog post was automatically generated from the latest AI research papers. Stay tuned for more updates!</em></p>
     </div>
     """
-    
     return content
 
 def get_category_info(category: str) -> Dict:

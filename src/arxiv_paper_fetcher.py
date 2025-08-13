@@ -1,12 +1,14 @@
 import arxiv
 import requests
+import os
 import feedparser
 import tempfile
-import PyPDF2
+import pymupdf
 from datetime import datetime, timedelta
 from typing import List, Dict
 import time
 import re
+from .paper import Paper
 
 class PaperFetcher:
     def __init__(self):
@@ -20,7 +22,7 @@ class PaperFetcher:
             num_retries=3
         )
     
-    def fetch_recent_papers(self, max_results: int = 50) -> List[Dict]:
+    def fetch_recent_papers(self, max_results: int = 50) -> List[Paper]:
         """Fetch recent papers from arXiv"""
         papers = []
         
@@ -35,17 +37,17 @@ class PaperFetcher:
         
         try:
             for result in self.client.results(search):
-                paper_data = {
-                    'arxiv_id': result.entry_id.split('/')[-1],
-                    'title': result.title,
-                    'authors': [author.name for author in result.authors],
-                    'abstract': result.summary,
-                    'categories': result.categories,
-                    'published_date': result.published.strftime('%Y-%m-%d'),
-                    'pdf_url': result.pdf_url,
-                    'entry_id': result.entry_id
-                }
-                papers.append(paper_data)
+                paper = Paper( 
+                    arxiv_id=result.entry_id.split('/')[-1],
+                    title=result.title,
+                    authors=[author.name for author in result.authors],
+                    abstract=result.summary,
+                    categories=result.categories,
+                    published_data=result.published.strftime('%Y-%m-%d'),
+                    pdf_url=result.pdf_url,
+                    entry_id=result.entry_id
+                )
+                papers.append(paper)
                 
                 # Add delay to be respectful to arXiv servers
                 time.sleep(1)
@@ -55,7 +57,7 @@ class PaperFetcher:
         
         return papers
     
-    def fetch_papers_by_date(self, date: str) -> List[Dict]:
+    def fetch_papers_by_date(self, date: str) -> List[Paper]:
         """Fetch papers published on a specific date"""
         papers = []
         
@@ -76,17 +78,17 @@ class PaperFetcher:
                 paper_date = result.published.date()
                 
                 if paper_date == target_date.date():
-                    paper_data = {
-                        'arxiv_id': result.entry_id.split('/')[-1],
-                        'title': result.title,
-                        'authors': [author.name for author in result.authors],
-                        'abstract': result.summary,
-                        'categories': result.categories,
-                        'published_date': result.published.strftime('%Y-%m-%d'),
-                        'pdf_url': result.pdf_url,
-                        'entry_id': result.entry_id
-                    }
-                    papers.append(paper_data)
+                    paper = Paper( 
+                    arxiv_id=result.entry_id.split('/')[-1],
+                    title=result.title,
+                    authors=[author.name for author in result.authors],
+                    abstract=result.summary,
+                    categories=result.categories,
+                    published_data=result.published.strftime('%Y-%m-%d'),
+                    pdf_url=result.pdf_url,
+                    entry_id=result.entry_id
+                )
+                    papers.append(paper)
                 
                 # Stop if we've gone past our target date
                 if paper_date < target_date.date():
@@ -99,7 +101,7 @@ class PaperFetcher:
         
         return papers
     
-    def filter_relevant_papers(self, papers: List[Dict]) -> List[Dict]:
+    def filter_relevant_papers(self, papers: List[Paper]) -> List[Paper]:
         """Filter papers to keep only the most relevant ones"""
         relevant_papers = []
         
@@ -114,8 +116,8 @@ class PaperFetcher:
         ]
         
         for paper in papers:
-            title_lower = paper['title'].lower()
-            abstract_lower = paper['abstract'].lower()
+            title_lower = paper.title.lower()
+            abstract_lower = paper.abstract.lower()
             
             # Check if paper contains relevant keywords
             relevance_score = 0
@@ -125,79 +127,36 @@ class PaperFetcher:
             
             # Keep papers with at least one relevant keyword
             if relevance_score > 0:
-                paper['relevance_score'] = relevance_score
+                paper.relevance_score = relevance_score
                 relevant_papers.append(paper)
         
         # Sort by relevance score
-        relevant_papers.sort(key=lambda x: x['relevance_score'], reverse=True)
+        relevant_papers.sort(key=lambda x: x.relevance_score, reverse=True)
         
         return relevant_papers[:30]  # Limit to top 30 most relevant papers
     
-    def get_paper_metadata(self, arxiv_id: str) -> Dict:
+    def get_paper_metadata(self, arxiv_id: str) -> Paper:
         """Get detailed metadata for a specific paper"""
         try:
             search = arxiv.Search(id_list=[arxiv_id])
             result = next(self.client.results(search))
             
-            return {
-                'arxiv_id': arxiv_id,
-                'title': result.title,
-                'authors': [author.name for author in result.authors],
-                'abstract': result.summary,
-                'categories': result.categories,
-                'published_date': result.published.strftime('%Y-%m-%d'),
-                'pdf_url': result.pdf_url,
-                'entry_id': result.entry_id
-            }
+            return Paper(
+                arxiv_id=result.entry_id.split('/')[-1],
+                title=result.title,
+                authors=[author.name for author in result.authors],
+                abstract=result.summary,
+                categories=result.categories,
+                published_data=result.published.strftime('%Y-%m-%d'),
+                pdf_url=result.pdf_url,
+                entry_id=result.entry_id
+            )
         except Exception as e:
             print(f"Error fetching metadata for {arxiv_id}: {e}")
             return None
         
-    def download_paper(self, paper_url: str) -> str:
-        """Download a paper"""
-        try: 
-            response = requests.get(paper_url, timeout=30)
-            response.raise_for_status()
-            
-            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
-            tmp_file.write(response.content)
-            tmp_file.close()
-            return tmp_file.name
-            
-        except requests.RequestException as e:
-            raise Exception(f"Failed to download PDF: {str(e)}")
     
-    def summarize_paper(self, paper_data: Dict) -> str:
-        """Summarize a paper"""
-        paper_url = f"https://arxiv.org/pdf/{paper_data['arxiv_id']}"
-        pdf_path = self.download_paper(paper_url)
-        
-        try:
-            content = {}
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                if pdf_reader.metadata:
-                    content['metadata'] = {
-                        'title': pdf_reader.metadata.get('/Title', ''),
-                        'author': pdf_reader.metadata.get('/Author', ''),
-                        'subject': pdf_reader.metadata.get('/Subject', ''),
-                        'creator': pdf_reader.metadata.get('/Creator', ''),
-                        'producer': pdf_reader.metadata.get('/Producer', ''),
-                        'creation_date': pdf_reader.metadata.get('/CreationDate', ''),
-                        'modification_date': pdf_reader.metadata.get('/ModDate', '')
-                    }
-                print("TESTING")
-                full_text = ""
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    full_text += page.extract_text() + "\n"
-                
-                content['full_text'] = full_text
-            
-        except Exception as e:
-            print("Error occured while reading pdf: ", e)
-
-    def fetch_papers_by_category(self, keywords: list, max_results: int = 3) -> List[Dict]:
+    def fetch_papers_by_category(self, keywords: list, max_results: int = 3) -> List[Paper]:
         """
         Fetch papers from arXiv matching any of the provided keywords in title or abstract.
         """
@@ -235,17 +194,17 @@ class PaperFetcher:
                 # if not keyword_found:
                 #     continue
                 
-                paper_data = {
-                    'arxiv_id': result.entry_id.split('/')[-1],
-                    'title': result.title,
-                    'authors': [author.name for author in result.authors],
-                    'abstract': result.summary,
-                    'categories': result.categories,
-                    'published_date': result.published.strftime('%Y-%m-%d'),
-                    'pdf_url': result.pdf_url,
-                    'entry_id': result.entry_id
-                }
-                papers.append(paper_data)
+                paper = Paper( 
+                    arxiv_id=result.entry_id.split('/')[-1],
+                    title=result.title,
+                    authors=[author.name for author in result.authors],
+                    abstract=result.summary,
+                    categories=result.categories,
+                    published_data=result.published.strftime('%Y-%m-%d'),
+                    pdf_url=result.pdf_url,
+                    entry_id=result.entry_id
+                )
+                papers.append(paper)
                 
                 if len(papers) >= max_results:
                     break

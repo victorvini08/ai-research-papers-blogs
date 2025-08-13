@@ -38,7 +38,7 @@
                         <div class="text-end">
                             <small class="d-block">
                                 <i class="fas fa-calendar me-1"></i>
-                                Published: {{ paper.published_date }}
+                                Published: {{ paper.published_data }}
                             </small>
                             <small class="d-block">
                                 <i class="fas fa-hashtag me-1"></i>
@@ -131,7 +131,7 @@
                     
                     <div class="mb-3">
                         <strong>Published Date:</strong>
-                        <p class="mb-0">{{ paper.published_date }}</p>
+                        <p class="mb-0">{{ paper.published_data }}</p>
                     </div>
                     
                     <div class="mb-3">
@@ -169,7 +169,7 @@
                         <button class="btn btn-outline-secondary" onclick="sharePaper()">
                             <i class="fas fa-share me-2"></i>Share Paper
                         </button>
-                        <a href="{{ url_for('daily_summary', date=paper.published_date) }}" 
+                        <a href="{{ url_for('daily_summary', date=paper.published_data) }}" 
                            class="btn btn-outline-info">
                             <i class="fas fa-calendar-day me-2"></i>View Daily Summary
                         </a>
@@ -188,7 +188,7 @@
                     <p class="text-muted small">
                         Papers from the same date or category will appear here.
                     </p>
-                    <a href="{{ url_for('daily_summary', date=paper.published_date) }}" 
+                    <a href="{{ url_for('daily_summary', date=paper.published_data) }}" 
                        class="btn btn-sm btn-outline-primary">
                         View Same Day Papers
                     </a>

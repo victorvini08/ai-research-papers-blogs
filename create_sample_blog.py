@@ -5,7 +5,7 @@ Script to create a sample blog post for testing
 
 from src.arxiv_paper_fetcher import PaperFetcher
 from src.database import PaperDatabase
-from src.web_app import generate_blog_content, generate_blog_summary
+from src.blog import generate_blog_content, generate_blog_summary
 from datetime import datetime
 import json
 
@@ -39,7 +39,7 @@ def create_sample_blog():
     # Get categories
     categories = set()
     for paper in papers:
-        category = paper.get('category', 'General AI')
+        category = paper.category or 'General AI'
         categories.add(category)
     categories_str = ', '.join(list(categories))
     
