@@ -80,29 +80,29 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <a href="#generative-ai" class="btn btn-outline-primary w-100">
+                                <a href="#generative-ai" class="btn btn-outline-primary w-100 nav-btn" data-target="generative-ai">
                                     <i class="fas fa-crown me-2"></i>Generative AI & LLMs
                                 </a>
                             </div>
                             <div class="col-md-3">
-                                <a href="#computer-vision" class="btn btn-outline-success w-100">
+                                <a href="#computer-vision" class="btn btn-outline-success w-100 nav-btn" data-target="computer-vision">
                                     <i class="fas fa-eye me-2"></i>Computer Vision & MultiModal AI
                                 </a>
                             </div>
                             <div class="col-md-3">
-                                <a href="#agentic-ai" class="btn btn-outline-info w-100">
+                                <a href="#agentic-ai" class="btn btn-outline-info w-100 nav-btn" data-target="agentic-ai">
                                     <i class="fas fa-robot me-2"></i>Agentic AI
                                 </a>
                             </div>
                             <div class="col-md-3">
-                                <a href="#healthcare-ai" class="btn btn-outline-warning w-100">
+                                <a href="#healthcare-ai" class="btn btn-outline-warning w-100 nav-btn" data-target="healthcare-ai">
                                     <i class="fas fa-heartbeat me-2"></i>AI in Healthcare
                                 </a>
                             </div>
                         </div>
                         <div class="row g-3 mt-3">
                             <div class="col-md-3">
-                                <a href="#explainable-ai" class="btn btn-outline-secondary w-100">
+                                <a href="#explainable-ai" class="btn btn-outline-secondary w-100 nav-btn" data-target="explainable-ai">
                                     <i class="fas fa-shield-alt me-2"></i>Explainable & Ethical AI
                                 </a>
                             </div>
@@ -130,6 +130,11 @@
 </div>
 
 <style>
+
+html {
+    scroll-behavior: smooth;
+}
+
 .quick-actions-bar {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     padding: 1.5rem;
@@ -158,6 +163,12 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+.section-index-card .btn.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
 /* Enhanced section headers */
 .blog-content h2 {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -169,6 +180,7 @@
     align-items: center;
     gap: 1rem;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    scroll-margin-top: 100px;
 }
 
 .blog-content h2:first-of-type {
@@ -186,6 +198,8 @@
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
+    padding: 1.5rem;
+    background: white;
 }
 
 .paper-card:hover {
@@ -219,21 +233,245 @@
     gap: 0.5rem;
 }
 
-.summary-section p {
-    margin-bottom: 0;
-    line-height: 1.6;
-    color: var(--text-secondary);
+.llm-summary-grid-enhanced {
+    display: grid;
+    grid-template-columns: 1fr 1fr;  /* 2 columns for 2x2 grid */
+    grid-template-rows: 1fr 1fr;     /* 2 rows for 2x2 grid */
+    gap: 1rem;
+    margin: 2rem 0;
+    min-height: 300px;  /* Ensures consistent grid height */
 }
 
-/* Responsive grid */
+.summary-section-enhanced {
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+}
+
+.summary-section-enhanced:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* Minimalistic color-coded sections */
+.summary-section-enhanced.problem-section {
+    background: #ffffff;
+    border-left: 4px solid #dc3545;
+}
+
+.summary-section-enhanced.analogy-section {
+    background: #ffffff;
+    border-left: 4px solid #0dcaf0;
+}
+
+.summary-section-enhanced.innovation-section {
+    background: #ffffff;
+    border-left: 4px solid #6f42c1;
+}
+
+.summary-section-enhanced.impact-section {
+    background: #ffffff;
+    border-left: 4px solid #198754;
+}
+
+.summary-section-enhanced.placeholder {
+    background: #f8f9fa;
+    border-left: 4px solid #6c757d;
+    opacity: 0.7;
+}
+
+/* Improved section headers with icons and visual hierarchy */
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.section-icon {
+    font-size: 1.3rem;
+    margin-right: 0.75rem;
+    color: #495057;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+}
+
+/* Problem section icon color */
+.problem-section .section-icon {
+    color: #dc3545;
+}
+
+/* Analogy section icon color */
+.analogy-section .section-icon {
+    color: #0dcaf0;
+}
+
+/* Innovation section icon color */
+.innovation-section .section-icon {
+    color: #6f42c1;
+}
+
+/* Impact section icon color */
+.impact-section .section-icon {
+    color: #198754;
+}
+
+/* Improved content typography for better readability */
+.section-content {
+    flex-grow: 1;
+    line-height: 1.6;
+}
+
+.section-content p {
+    margin-bottom: 0.75rem;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.section-content p:last-child {
+    margin-bottom: 0;
+}
+
+.section-content ul, .section-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.section-content li {
+    margin-bottom: 0.25rem;
+    color: #495057;
+}
+
 @media (max-width: 768px) {
-    .llm-summary-grid {
-        grid-template-columns: 1fr;
+    .llm-summary-grid-enhanced {
+        grid-template-columns: 1fr;      /* Single column on mobile */
+        grid-template-rows: repeat(4, auto);  /* 4 rows instead of 2x2 */
+        gap: 1rem;
+        min-height: auto;
     }
     
     .section-index-card .btn {
         margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .summary-section-enhanced {
+        padding: 1rem;  /* Reduced padding on mobile */
+    }
+    
+    .section-icon {
+        font-size: 1.2rem;
+    }
+    
+    .section-title {
+        font-size: 1rem;
     }
 }
+
+@media (max-width: 576px) {
+    .section-content p {
+        font-size: 0.9rem;
+    }
+    
+    .summary-section-enhanced {
+        padding: 0.75rem;
+    }
+}
+
+.category-section {
+    scroll-margin-top: 100px;
+}
+
+/* Ensure sections have correct IDs for navigation */
+#generative-ai,
+#computer-vision,
+#agentic-ai,
+#healthcare-ai,
+#explainable-ai {
+    scroll-margin-top: 100px;
+}
 </style>
-{% endblock %} 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Smooth scrolling navigation with offset
+    const navButtons = document.querySelectorAll('.nav-btn');
+    
+    navButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetId = this.getAttribute('data-target');
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                const offsetTop = targetElement.offsetTop - 100; // 100px offset for better visibility
+                
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+                
+                // Add visual feedback
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            } else {
+                console.warn(`Target element with ID '${targetId}' not found`);
+            }
+        });
+    });
+    
+    // Highlight active section in navigation
+    function highlightActiveSection() {
+        const sections = document.querySelectorAll('[id^="generative-ai"], [id^="computer-vision"], [id^="agentic-ai"], [id^="healthcare-ai"], [id^="explainable-ai"]');
+        const navButtons = document.querySelectorAll('.nav-btn');
+        
+        let currentSection = '';
+        const scrollPos = window.scrollY + 150; // Account for offset
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            
+            if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                currentSection = section.id;
+            }
+        });
+        
+        navButtons.forEach(button => {
+            button.classList.remove('active');
+            if (button.getAttribute('data-target') === currentSection) {
+                button.classList.add('active');
+            }
+        });
+    }
+    
+    // Throttled scroll listener
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+        }
+        scrollTimeout = setTimeout(highlightActiveSection, 100);
+    });
+    
+    // Initial highlight
+    highlightActiveSection();
+});
+</script>
+{% endblock %}

@@ -176,23 +176,13 @@ class PaperFetcher:
         
         search = arxiv.Search(
             query=search_query,
-            max_results=max_results * 2,  # Fetch more to filter
+            max_results=max_results,
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending
         )
         
         try:
             for result in self.client.results(search):
-                
-                # title_lower = result.title.lower()
-                # abstract_lower = result.summary.lower()
-                
-                # # Check if any keyword appears in title or abstract
-                # keyword_found = any(kw.lower() in title_lower or kw.lower() in abstract_lower 
-                #                    for kw in keywords)
-                
-                # if not keyword_found:
-                #     continue
                 
                 paper = Paper( 
                     arxiv_id=result.entry_id.split('/')[-1],

@@ -21,6 +21,9 @@ class Paper():
         self.category = category
         self.novelty_score = novelty_score
         self.source = source
+        self.quality_score = 0.0
+        self.author_h_indices = []
+        self.author_institutions = []
 
     def to_dict(self):
         """Convert Paper object to dictionary for database operations"""

@@ -83,53 +83,86 @@ def generate_blog_summary(papers: List[Paper]) -> str:
 
 def render_structured_summary(summary_dict):
     """Render structured LLM summary in a 2x2 grid layout"""
-    # Section display order and icons for 2x2 grid
-    section_order = [
-        ("key problem", "🧩", "Key Problem"),
-        ("problem", "🧩", "Problem"),
-        ("main problem", "🧩", "Main Problem"),
-        ("challenge", "🧩", "Challenge"),
-        ("key innovation", "💡", "Key Innovation"),
-        ("innovation", "💡", "Innovation"),
-        ("novelty", "💡", "Novelty"),
-        ("contribution", "💡", "Contribution"),
-        ("practical impact", "🌍", "Practical Impact"),
-        ("impact", "🌍", "Impact"),
-        ("real-world impact", "🌍", "Real-world Impact"),
-        ("implications", "🌍", "Implications"),
-        ("analogy", "🔍", "Analogy"),
-        ("intuitive explanation", "🔍", "Intuitive Explanation"),
-        ("analogy / intuitive explanation", "🔍", "Analogy / Intuitive Explanation"),
+    grid_sections = [
+        {
+            "keys": ["key problem", "problem", "main problem", "challenge"],
+            "icon": "🧩",
+            "label": "Problem",
+            "class": "problem-section"
+        },
+        {
+            "keys": ["analogy", "intuitive explanation", "analogy / intuitive explanation"],
+            "icon": "💡",
+            "label": "Analogy",
+            "class": "analogy-section"
+        },
+        {
+            "keys": ["key innovation", "innovation", "novelty", "contribution"],
+            "icon": "🚀",
+            "label": "Key Innovation",
+            "class": "innovation-section"
+        },
+        {
+            "keys": ["practical impact", "impact", "real-world impact", "implications"],
+            "icon": "🌍",
+            "label": "Practical Impact",
+            "class": "impact-section"
+        }
     ]
+
     # Lowercase keys for matching
     summary_keys = {k.lower(): k for k in summary_dict.keys()}
-    html = '<div class="llm-summary-grid">'
-    shown = set()
-    for key, icon, label in section_order:
-        if key in summary_keys and key not in shown:
-            section_content = summary_dict[summary_keys[key]].strip()
-            if section_content:
-                html += f'''<div class="summary-section">
-                    <h4>{icon} {label}</h4>
-                    <div>{markdown2.markdown(section_content)}</div>
-                </div>'''
-                shown.add(key)
-    # Render any extra sections not in the order
-    for k, v in summary_dict.items():
-        lk = k.lower()
-        if lk not in shown and lk != "summary" and v.strip():
-            html += f'''<div class="summary-section">
-                <h4>📝 {k.title()}</h4>
-                <div>{markdown2.markdown(v.strip())}</div>
+
+    html = '<div class="llm-summary-grid-enhanced">'
+    for section in grid_sections:
+        section_content = ""
+        found_key = None
+        for key in section["keys"]:
+            if key in summary_keys:
+                found_key = summary_keys[key]
+                section_content = summary_dict[found_key].strip()
+                break
+        
+        if section_content:
+            html += f'''
+            <div class="summary-section-enhanced {section['class']}">
+                <div class="section-header">
+                    <h4 class="section-title">{section['label']}</h4>
+                </div>
+                <div class="section-content">
+                    {markdown2.markdown(section_content)}
+                </div>
             </div>'''
-    # If only a generic 'summary' key, show it
-    if not shown and "summary" in summary_dict:
-        html += f'<div class="summary-section">{markdown2.markdown(summary_dict["summary"])}</div>'
+        else:
+            # Show placeholder if no content found
+            html += f'''
+            <div class="summary-section-enhanced {section['class']} placeholder">
+                <div class="section-header">
+                    <h4 class="section-title">{section['label']}</h4>
+                </div>
+                <div class="section-content">
+                    <p class="text-muted">Content not available</p>
+                </div>
+            </div>'''
+    
     html += '</div>'
     return html
 
+def get_category_anchor_id(category: str) -> str:
+    """Generate anchor ID for category navigation"""
+
+    category_anchors = {
+        "Generative AI & LLMs": "generative-ai",
+        "Computer Vision & MultiModal AI": "computer-vision",
+        "Agentic AI": "agentic-ai",
+        "AI in Healthcare": "healthcare-ai",
+        "Explainable & Ethical AI": "explainable-ai"
+    }
+    return category_anchors.get(category, category.lower().replace(" ", "-").replace("&", "").replace("/", ""))
+
 def generate_blog_content(papers: List[Paper]) -> str:
     """Generate engaging blog content from recent papers"""
+
     if not papers:
         return "<h1>No Papers Available</h1><p>No recent papers are available at the moment.</p>"
     
@@ -165,10 +198,11 @@ def generate_blog_content(papers: List[Paper]) -> str:
     """
     for category, category_papers in categories.items():
         category_info = get_category_info(category)
+        anchor_id = get_category_anchor_id(category)
         content += f"""
-        <div class="category-section">
+        <div class="category-section id="{anchor_id}">
             <div class="category-header">
-                <h2 class="category-title">{category_info['icon']} {category}</h2>
+                <h2 class="category-title">{category}</h2>
                 <p class="category-description">{category_info['description']}</p>
             </div>
         """
@@ -194,7 +228,6 @@ def generate_blog_content(papers: List[Paper]) -> str:
                         <div class="paper-meta">
                             <span class="category-badge">{paper.category}</span>
                             <span class="paper-date">{paper.published_data}</span>
-                            {f'<span class="novelty-score">Novelty: {paper.novelty_score:.1f}</span>' if paper.novelty_score else ''}
                         </div>
                     </div>
                 </div>
@@ -223,28 +256,22 @@ def get_category_info(category: str) -> Dict:
     """Get category-specific information for better presentation"""
     category_info = {
         "Generative AI & LLMs": {
-            "icon": "🤖",
             "description": "Breakthroughs in language models, text generation, and creative AI systems"
         },
         "Computer Vision & MultiModal AI": {
-            "icon": "👁️",
             "description": "Advances in image recognition, video analysis, and multimodal learning"
         },
         "Agentic AI": {
-            "icon": "🤝",
             "description": "Autonomous agents, multi-agent systems, and intelligent decision-making"
         },
         "AI in Healthcare": {
-            "icon": "🏥",
             "description": "AI applications in medical diagnosis, drug discovery, and healthcare systems"
         },
         "Explainable & Ethical AI": {
-            "icon": "⚖️",
             "description": "Transparency, fairness, and responsible AI development"
         }
     }
     
     return category_info.get(category, {
-        "icon": "🔬",
         "description": "Cutting-edge research in artificial intelligence"
     })

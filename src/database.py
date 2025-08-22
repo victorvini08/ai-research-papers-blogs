@@ -40,10 +40,37 @@ class PaperDatabase:
                 category TEXT,
                 novelty_score REAL,
                 source TEXT,
+                quality_score REAL DEFAULT 0.0,
+                author_h_indices TEXT,
+                author_institutions TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # Ensure missing columns exist for legacy databases
+        cursor.execute("PRAGMA table_info(papers)")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+
+        # Columns to ensure with their ALTER TABLE statements
+        migrations = []
+        if 'quality_score' not in existing_columns:
+            migrations.append("ALTER TABLE papers ADD COLUMN quality_score REAL DEFAULT 0.0")
+        if 'author_h_indices' not in existing_columns:
+            migrations.append("ALTER TABLE papers ADD COLUMN author_h_indices TEXT DEFAULT '[]'")
+        if 'author_institutions' not in existing_columns:
+            migrations.append("ALTER TABLE papers ADD COLUMN author_institutions TEXT DEFAULT '[]'")
+        if 'created_at' not in existing_columns:
+            migrations.append("ALTER TABLE papers ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'updated_at' not in existing_columns:
+            migrations.append("ALTER TABLE papers ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
+        for stmt in migrations:
+            try:
+                cursor.execute(stmt)
+            except sqlite3.OperationalError:
+                # Ignore if add fails due to race/other
+                pass
         
         # Daily summaries table
         cursor.execute('''
@@ -112,8 +139,9 @@ class PaperDatabase:
             cursor.execute('''
                 INSERT INTO papers (
                     arxiv_id, title, authors, abstract, categories, 
-                    published_date, summary, category, novelty_score, source
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    published_date, summary, category, novelty_score, source,
+                    quality_score, author_h_indices, author_institutions
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 paper.arxiv_id,
                 paper.title,
@@ -124,7 +152,10 @@ class PaperDatabase:
                 json.dumps(paper.summary) if isinstance(paper.summary, dict) else (paper.summary or ''),
                 paper.category or '',
                 paper.novelty_score or 0.0,
-                paper.source or 'arxiv'
+                paper.source or 'arxiv',
+                paper.quality_score or 0.0,
+                json.dumps(paper.author_h_indices) if paper.author_h_indices else '[]',
+                json.dumps(paper.author_institutions) if paper.author_institutions else '[]'
             ))
             
             conn.commit()
@@ -363,6 +394,7 @@ class PaperDatabase:
         
         conn.commit()
         conn.close()
+        return cursor.lastrowid
     
     def get_all_blogs(self) -> List[Dict]:
         """Get all blogs ordered by recency"""
