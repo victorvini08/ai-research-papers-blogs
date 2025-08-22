@@ -7,3 +7,5 @@ src/__pycache__/web_app.cpython-312.pyc
 src/__pycache__/web_app.cpython-312.pyc
 src/__pycache__/web_app.cpython-313.pyc
 src/__pycache__/web_app.cpython-312.pyc
+src/__pycache__/*.pyc
+/__pycache__/*.pyc

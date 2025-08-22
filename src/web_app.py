@@ -258,6 +258,15 @@ def scheduler_health():
     """API endpoint to check scheduler health"""
     return jsonify(paper_scheduler.get_scheduler_health())
 
+@app.route('/health')
+def health_check():
+    """Simple health check endpoint for deployment platforms"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'AI Research Papers Summarizer'
+    })
+
 @app.route('/api/fetch-papers', methods=['POST'])
 def fetch_papers():
     """API endpoint to manually trigger paper fetching"""

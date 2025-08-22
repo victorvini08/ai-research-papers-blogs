@@ -1,10 +1,43 @@
+FROM python:3.9-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy and install requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Production stage
 FROM python:3.9-slim
 
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Create app directory
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
-
+# Copy application code
 COPY . .
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "web_app:app"]
+# Set environment variables
+ENV PORT=8080
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_ENV=production
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
+# Run the application
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8080", "--timeout", "120", "main:app"]

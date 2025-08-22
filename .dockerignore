@@ -1,0 +1,75 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database files (will be mounted as volume)
+database/*.db
+*.db
+
+# Test files
+test_*.py
+*_test.py
+test.py
+
+# Demo files
+demo_*.py
+create_sample_blog.py
+
+# Output files
+output*.json
+robust_output.json
+different_paper_output.json
+llm_summarization_test.json
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+
+# Documentation
+DEPLOYMENT.md
+deploy.sh

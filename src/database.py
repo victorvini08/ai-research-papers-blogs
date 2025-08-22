@@ -1,4 +1,5 @@
 import sqlite3
+import os
 import json
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -17,8 +18,14 @@ def _parse_summary_field(summary_field):
         return summary_field
 
 class PaperDatabase:
-    def __init__(self, db_path: str = "database/papers.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        # Allow overriding via env var for deploys with volumes
+        env_db_path = os.environ.get('DATABASE_PATH')
+        self.db_path = env_db_path or db_path or "database/papers.db"
+        # Ensure parent directory exists
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
         self.init_database()
     
     def init_database(self):
