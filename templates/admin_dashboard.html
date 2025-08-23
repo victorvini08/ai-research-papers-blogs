@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - AI Research Daily{% endblock %}
+
+{% block content %}
+<!-- Admin Dashboard Header -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="display-4 fw-bold mb-4 text-light">
+                    Admin Dashboard
+                </h1>
+                <p class="lead text-light">
+                    Monitor your AI Research Daily application status and manage content
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Status Overview -->
+<section class="status-overview py-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-number text-dark">{{ stats.papers_count }}</div>
+                        <div class="stat-label">Total Papers</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-number text-dark">{{ stats.blogs_count }}</div>
+                        <div class="stat-label">Total Blogs</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-number text-dark">{{ stats.subscribers_count }}</div>
+                        <div class="stat-label">Subscribers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Scheduler Status -->
+<section class="scheduler-status py-4 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Scheduler Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Scheduler Health</h6>
+                                <div id="schedulerHealth">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                        Checking scheduler status...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Manual Controls -->
+<section class="manual-controls py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            Manual Controls
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="d-grid">
+                                    <button class="btn btn-outline-primary" onclick="fetchPapers()">
+                                        <i class="fas fa-download me-2"></i>
+                                        Fetch Papers
+                                    </button>
+                                    <small class="text-muted mt-1">Download new papers from arXiv</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid">
+                                    <button class="btn btn-primary" onclick="fetchAndPersistPapers()">
+                                        <i class="fas fa-magic me-2"></i>
+                                        Fetch & Generate Blog
+                                    </button>
+                                    <small class="text-muted mt-1">Complete pipeline execution</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="controlStatus" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recent Activity -->
+<section class="recent-activity py-4 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Recent Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTable">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            Loading activity...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Check scheduler health on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkSchedulerHealth();
+    loadRecentActivity();
+});
+
+function checkSchedulerHealth() {
+    fetch('/api/scheduler-health')
+        .then(response => response.json())
+        .then(data => {
+            const healthDiv = document.getElementById('schedulerHealth');
+            if (data.is_running) {
+                healthDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Scheduler is running</div>';
+            } else {
+                healthDiv.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>Scheduler is not running</div>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('schedulerHealth').innerHTML = '<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Error checking scheduler status</div>';
+        });
+}
+
+function fetchPapers() {
+    const statusDiv = document.getElementById('controlStatus');
+    statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Fetching papers...</div>';
+    
+    fetch('/api/fetch-papers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = `<div class="alert alert-success"><i class="fas fa-check me-2"></i>${data.message}</div>`;
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>${data.message}</div>`;
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${error.message}</div>`;
+    });
+}
+
+function fetchAndPersistPapers() {
+    const statusDiv = document.getElementById('controlStatus');
+    statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Fetching papers and generating blog...</div>';
+    
+    fetch('/api/fetch-and-persist-papers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = `<div class="alert alert-success"><i class="fas fa-check me-2"></i>${data.message}</div>`;
+            setTimeout(() => location.reload(), 3000);
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>${data.message}</div>`;
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${error.message}</div>`;
+    });
+}
+
+
+function loadRecentActivity() {
+    // This would typically load from a real activity log
+    // For now, we'll show a placeholder
+    const tableBody = document.getElementById('activityTable');
+    tableBody.innerHTML = `
+        <tr>
+            <td>${new Date().toLocaleDateString()}</td>
+            <td>Page Load</td>
+            <td>Admin dashboard accessed</td>
+            <td><span class="badge bg-success">Success</span></td>
+        </tr>
+        <tr>
+            <td>${new Date().toLocaleDateString()}</td>
+            <td>System Check</td>
+            <td>Scheduler health verified</td>
+            <td><span class="badge bg-info">Info</span></td>
+        </tr>
+    `;
+}
+</script>
+{% endblock %}

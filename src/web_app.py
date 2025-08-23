@@ -267,6 +267,32 @@ def health_check():
         'service': 'AI Research Papers Summarizer'
     })
 
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard showing system status and controls"""
+    try:
+        # Get database statistics
+        papers_count = len(db.get_recent_papers(days=365))
+        blogs_count = len(db.get_all_blogs())
+        subscribers_count = len(db.get_all_subscriber_emails())
+        
+        stats = {
+            'papers_count': papers_count,
+            'blogs_count': blogs_count,
+            'subscribers_count': subscribers_count,
+        }
+        
+        return render_template('admin_dashboard.html', stats=stats)
+        
+    except Exception as e:
+        app.logger.error(f"Error loading admin dashboard: {e}")
+        return render_template('admin_dashboard.html', stats={
+            'papers_count': 0,
+            'blogs_count': 0,
+            'subscribers_count': 0,
+            'daily_summaries_count': 0
+        })
+
 @app.route('/api/fetch-papers', methods=['POST'])
 def fetch_papers():
     """API endpoint to manually trigger paper fetching"""
@@ -294,6 +320,36 @@ def fetch_papers():
         return jsonify({
             'success': False,
             'message': f'Error fetching papers: {str(e)}'
+        }), 500
+
+@app.route('/api/fetch-and-persist-papers', methods=['POST'])
+def fetch_and_persist_papers():
+    """API endpoint to manually trigger the full paper fetching and blog generation process"""
+    try:
+        from .paper_fetch_scheduler import PaperFetchScheduler
+        
+        # Create a new scheduler instance for manual execution
+        manual_scheduler = PaperFetchScheduler()
+        
+        # Run the full process
+        manual_scheduler.fetch_and_persist_papers()
+        
+        # Get the latest blog to show what was created
+        latest_blog = db.get_all_blogs()
+        blog_info = latest_blog[0] if latest_blog else None
+        
+        return jsonify({
+            'success': True,
+            'message': 'Successfully executed full paper fetching and blog generation process',
+            'blog_created': blog_info is not None,
+            'latest_blog': blog_info
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Error in manual paper fetching: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error executing paper fetching process: {str(e)}'
         }), 500
 
 @app.route('/api/generate-summary', methods=['POST'])

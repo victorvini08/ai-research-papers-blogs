@@ -4,22 +4,22 @@
 
 {% block content %}
 <!-- Page Header -->
-<section class="page-header bg-primary text-white py-4">
+<section class="page-header bg-white py-4 border-bottom">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1 class="display-5 fw-bold mb-2">
-                    <i class="fas fa-file-alt me-3"></i>
+                <h1 class="display-5 fw-bold mb-2 text-dark">
+                    <i class="fas fa-file-alt me-3 text-muted"></i>
                     All Research Papers
                 </h1>
-                <p class="lead mb-0">
+                <p class="lead mb-0 text-muted">
                     Browse through our complete collection of AI research papers with AI-powered summaries
                 </p>
             </div>
             <div class="col-md-4 text-md-end">
                 <div class="d-flex gap-2 justify-content-md-end">
-                    <span class="badge bg-light text-primary fs-6">
-                        <i class="fas fa-database me-2"></i>
+                    <span class="badge bg-light text-dark border fs-6">
+                        <i class="fas fa-database me-2 text-muted"></i>
                         {{ papers|length }} Papers
                     </span>
                 </div>

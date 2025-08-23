@@ -1,163 +1,219 @@
 {% extends "base.html" %}
 
-{% block title %}AI Research Daily - Stay Updated with Latest AI Research{% endblock %}
+{% block title %}AI Research Weekly - Stay Updated with Latest AI Research{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
-<section class="hero-section">
+<section class="modern-hero">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <h1 class="display-4 fw-bold mb-4 text-white">
-                    <i class="fas fa-brain me-3"></i>
-                    AI Research Daily
-                </h1>
-                <p class="lead mb-4 text-white-50">
-                    Stay ahead of the curve with our curated weekly blogs covering the latest breakthroughs in artificial intelligence. 
-                    We read, analyze, and summarize cutting-edge research papers so you don't have to.
-                </p>
-                <div class="d-flex gap-3 mb-4">
-                    <span class="badge bg-light text-dark fs-6">
-                        <i class="fas fa-clock me-2"></i>
-                        Weekly Updates
-                    </span>
-                    <span class="badge bg-light text-dark fs-6">
-                        <i class="fas fa-robot me-2"></i>
-                        Research Paper Summaries
-                    </span>
-                    <span class="badge bg-light text-dark fs-6">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Curated Selection
-                    </span>
-                </div>
-            </div>
-            <div class="col-lg-5">
-                <div class="email-subscription-card">
-                    <div class="card border-0 shadow-lg">
-                        <div class="card-body p-4">
-                            <h4 class="card-title text-center mb-3">
-                                <i class="fas fa-envelope-open-text text-primary me-2"></i>
-                                Get Weekly AI Research Updates
-                            </h4>
-                            <p class="text-muted text-center mb-4">
-                                Receive our curated weekly blog posts directly in your inbox. 
-                                Stay informed about the latest AI breakthroughs without the overwhelm.
-                            </p>
-                            <form id="emailSubscriptionForm" method="POST" action="{{ url_for('subscribe_email') }}">
-                                <div class="input-group mb-3">
-                                    <input type="email" class="form-control form-control-lg" 
-                                           id="email" name="email" 
-                                           placeholder="Enter your email address" 
-                                           required>
-                                    <button class="btn btn-primary btn-lg" type="submit">
-                                        <i class="fas fa-paper-plane me-2"></i>Subscribe
-                                    </button>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="fas fa-shield-alt me-1"></i>
-                                    We respect your privacy. Unsubscribe at any time.
-                                </small>
-                            </form>
+        <div class="row align-items-center min-vh-75">
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <div class="hero-badge mb-4">
+                        <span class="badge-icon">🧠</span>
+                        <span>AI Research Simplified</span>
+                    </div>
+                    <h1 class="hero-title">
+                        Stay Ahead with 
+                        <span class="highlight-text">AI Research Weekly</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        We summarize complex AI research papers into easy-to-read blogs for you! 
+                        Get weekly curated summaries of breakthrough discoveries delivered straight to your inbox.
+                    </p>
+                    <div class="hero-features mb-5">
+                        <div class="feature-item">
+                            <div class="feature-icon">📊</div>
+                            <span>Expert Curation</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">⚡</div>
+                            <span>Weekly Updates</span>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🎯</div>
+                            <span>Key Insights</span>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- What We Do Section -->
-<section class="what-we-do-section py-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-12 text-center mb-5">
-                <h2 class="display-5 fw-bold mb-3">
-                    <i class="fas fa-lightbulb text-primary me-3"></i>
-                    What We Do
-                </h2>
-                <p class="lead text-muted">We bridge the gap between cutting-edge AI research and practical understanding</p>
-            </div>
-        </div>
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="feature-card text-center p-4">
-                    <div class="feature-icon mb-3">
-                        <i class="fas fa-search fa-3x text-primary"></i>
-                    </div>
-                    <h4>Curated Discovery</h4>
-                    <p class="text-muted">
-                        We scan through hundreds of AI research papers weekly, selecting only the most impactful and relevant ones for our readers.
-                    </p>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="feature-card text-center p-4">
-                    <div class="feature-icon mb-3">
-                        <i class="fas fa-brain fa-3x text-success"></i>
-                    </div>
-                    <h4>AI-Powered Analysis</h4>
-                    <p class="text-muted">
-                        Using advanced language models, we extract key insights, innovations, and practical implications from complex research papers.
-                    </p>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="feature-card text-center p-4">
-                    <div class="feature-icon mb-3">
-                        <i class="fas fa-blog fa-3x text-info"></i>
-                    </div>
-                    <h4>Clear Communication</h4>
-                    <p class="text-muted">
-                        We transform technical jargon into clear, engaging content that helps you understand the real-world impact of AI research.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Previous Blogs Section -->
-{% if blogs %}
-<section class="previous-blogs-section py-5 bg-light">
-    <div class="container">
-        <div class="row">
-            <div class="col-12 text-center mb-5">
-                <h2 class="display-5 fw-bold mb-3">
-                    <i class="fas fa-archive text-primary me-3"></i>
-                    Previous Blog Posts
-                </h2>
-                <p class="lead text-muted">Explore our collection of weekly AI research roundups</p>
-            </div>
-        </div>
-        <div class="row g-4">
-            {% for blog in blogs[:6] %}
-            <div class="col-lg-4 col-md-6">
-                <div class="blog-card card h-100 border-0 shadow-sm">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <span class="badge bg-primary">{{ blog.paper_count }} papers</span>
-                            <small class="text-muted">{{ blog.published_date }}</small>
-                        </div>
-                        <h5 class="card-title">
-                            <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="text-decoration-none text-dark">
-                                {{ blog.title[:60] }}{% if blog.title|length > 60 %}...{% endif %}
-                            </a>
-                        </h5>
-                        <p class="card-text text-muted">
-                            {{ blog.summary[:120] }}{% if blog.summary|length > 120 %}...{% endif %}
-                        </p>
-                        <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-arrow-right me-1"></i>Read Post
+                    <div class="hero-actions">
+                        <a href="{{ url_for('blog_list') }}" class="btn btn-primary btn-lg">
+                            <span>Explore Research</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="#newsletter" class="btn btn-outline-dark btn-lg">
+                            <span>Subscribe</span>
                         </a>
                     </div>
                 </div>
             </div>
+            <div class="col-lg-6">
+                <div class="hero-visual">
+                    <div class="visual-card">
+                        <div class="card-header">
+                            <div class="card-dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <span class="card-title">Latest Research</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="research-item">
+                                <div class="research-badge">Neural Networks</div>
+                                <h4>Transformer Architecture Breakthrough</h4>
+                                <p>Revolutionary approach to attention mechanisms...</p>
+                            </div>
+                            <div class="research-item">
+                                <div class="research-badge">Computer Vision</div>
+                                <h4>Advanced Object Detection</h4>
+                                <p>New method achieves 95% accuracy...</p>
+                            </div>
+                            <div class="research-item">
+                                <div class="research-badge">NLP</div>
+                                <h4>Language Model Optimization</h4>
+                                <p>Efficient training techniques reduce costs...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Why Choose AI Research Weekly?</h2>
+            <p class="section-subtitle">We make cutting-edge AI research accessible to everyone</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">🔍</div>
+                    </div>
+                    <h3>Curated Selection</h3>
+                    <p>We review hundreds of papers weekly to bring you only the most impactful research with real-world applications.</p>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">🧠</div>
+                    </div>
+                    <h3>AI-Powered Analysis</h3>
+                    <p>Advanced language models help us extract key insights and explain complex concepts in simple terms.</p>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">📝</div>
+                    </div>
+                    <h3>Clear Summaries</h3>
+                    <p>Technical jargon transformed into engaging, understandable content that highlights practical implications.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter Section -->
+<section class="newsletter-section" id="newsletter">
+    <div class="container">
+        <div class="newsletter-wrapper">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="newsletter-content">
+                        <h2>Never Miss a Breakthrough</h2>
+                        <p class="lead">Join several researchers, developers, and AI enthusiasts who get our weekly insights.</p>
+                        <div class="newsletter-benefits">
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Weekly curated research summaries</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Key insights and practical applications</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Early access to breakthrough discoveries</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="newsletter-form-wrapper">
+                        <form id="emailSubscriptionForm" method="POST" action="{{ url_for('subscribe_email') }}" class="newsletter-form">
+                            <div class="form-group">
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       placeholder="Enter your email address" 
+                                       required>
+                                <button type="submit" class="btn btn-primary">
+                                    Subscribe
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <p class="form-note">
+                                <i class="fas fa-shield-alt"></i>
+                                No spam. Unsubscribe anytime.
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Latest Blogs Section -->
+{% if blogs %}
+<section class="blogs-section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Latest Research Roundups</h2>
+            <p class="section-subtitle">Explore our most recent AI research insights</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for blog in blogs[:3] %}
+            <div class="col-lg-4">
+                <article class="blog-card">
+                    <div class="blog-meta">
+                        <span class="blog-date">{{ blog.published_date }}</span>
+                        <span class="blog-papers">{{ blog.paper_count }} papers</span>
+                    </div>
+                    <h3 class="blog-title">
+                        <a href="{{ url_for('blog_detail', blog_id=blog.id) }}">
+                            {{ blog.title }}
+                        </a>
+                    </h3>
+                    <div class="blog-excerpt">
+                        {{ blog.summary[:150] }}{% if blog.summary|length > 150 %}...{% endif %}
+                    </div>
+                    <div class="blog-footer">
+                        <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="read-more">
+                            Read Full Analysis
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </article>
+            </div>
             {% endfor %}
         </div>
-        {% if blogs|length > 6 %}
+        
+        {% if blogs|length > 3 %}
         <div class="text-center mt-5">
-            <a href="{{ url_for('blog_list') }}" class="btn btn-primary btn-lg">
-                <i class="fas fa-list me-2"></i>View All {{ blogs|length }} Blog Posts
+            <a href="{{ url_for('blog_list') }}" class="btn btn-outline-primary btn-lg">
+                View All {{ blogs|length }} Research Posts
+                <i class="fas fa-arrow-right"></i>
             </a>
         </div>
         {% endif %}
@@ -165,28 +221,537 @@
 </section>
 {% endif %}
 
-<!-- Call to Action Section -->
-<section class="cta-section py-5">
+<!-- Stats Section -->
+<!-- <section class="stats-section">
     <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h3 class="fw-bold mb-4">
-                    <i class="fas fa-rocket text-primary me-3"></i>
-                    Ready to Stay Ahead in AI?
-                </h3>
-                <p class="lead mb-4">
-                    Join thousands of researchers, developers, and AI enthusiasts who get our weekly insights delivered to their inbox.
-                </p>
-                <div class="d-flex gap-3 justify-content-center">
-                    <a href="{{ url_for('papers_list') }}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-list me-2"></i>Browse All Papers
-                    </a>
-                    <a href="{{ url_for('blog_list') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-blog me-2"></i>Read Our Blogs
-                    </a>
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-item">
+                    <div class="stat-number">200+</div>
+                    <div class="stat-label">Papers Analyzed</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-item">
+                    <div class="stat-number">5K+</div>
+                    <div class="stat-label">Subscribers</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-item">
+                    <div class="stat-number">25+</div>
+                    <div class="stat-label">Weekly Updates</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-item">
+                    <div class="stat-number">95%</div>
+                    <div class="stat-label">Satisfaction Rate</div>
                 </div>
             </div>
         </div>
     </div>
-</section>
-{% endblock %} 
+</section> -->
+
+<style>
+.modern-hero {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 40px 0 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f1f5f9' fill-opacity='0.5'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.1;
+}
+
+.min-vh-75 {
+    min-height: 75vh;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    background: white;
+    padding: 8px 16px;
+    border-radius: 50px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 24px;
+}
+
+.badge-icon {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #111827;
+    margin-bottom: 24px;
+}
+
+.highlight-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 32px;
+}
+
+.hero-features {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.feature-icon {
+    font-size: 20px;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.hero-actions .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #111827;
+    border: none;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #374151;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(17, 24, 39, 0.3);
+}
+
+.btn-outline-dark {
+    background: transparent;
+    border: 2px solid #111827;
+    color: #111827;
+}
+
+.btn-outline-dark:hover {
+    background: #111827;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.hero-visual {
+    position: relative;
+    z-index: 2;
+}
+
+.visual-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transform: perspective(1000px) rotateY(-5deg) rotateX(5deg);
+    transition: transform 0.3s ease;
+}
+
+.visual-card:hover {
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.card-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.dot.red { background: #ef4444; }
+.dot.yellow { background: #f59e0b; }
+.dot.green { background: #10b981; }
+
+.card-title {
+    font-weight: 600;
+    color: #374151;
+}
+
+.card-content {
+    padding: 24px 20px;
+}
+
+.research-item {
+    margin-bottom: 24px;
+}
+
+.research-item:last-child {
+    margin-bottom: 0;
+}
+
+.research-badge {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.research-item h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.research-item p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.features-section {
+    padding: 80px 0;
+    background: white;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 64px;
+}
+
+.section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 16px;
+}
+
+.section-subtitle {
+    font-size: 1.125rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.feature-card {
+    background: white;
+    padding: 40px 32px;
+    border-radius: 16px;
+    text-align: center;
+    border: 1px solid #f3f4f6;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    border-color: #e5e7eb;
+}
+
+.feature-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    background: #f8fafc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+}
+
+.feature-icon-wrapper .feature-icon {
+    font-size: 32px;
+}
+
+.feature-card h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 16px;
+}
+
+.feature-card p {
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.newsletter-section {
+    background: linear-gradient(135deg, #111827 0%, #374151 100%);
+    padding: 80px 0;
+    color: white;
+}
+
+.newsletter-wrapper {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 60px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.newsletter-content h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.newsletter-content .lead {
+    font-size: 1.25rem;
+    opacity: 0.9;
+    margin-bottom: 32px;
+}
+
+.newsletter-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.benefit-item i {
+    color: #10b981;
+    font-size: 18px;
+}
+
+.newsletter-form-wrapper {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+}
+
+.newsletter-form .form-group {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.newsletter-form input {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+    margin-bottom: 16px;
+}
+
+.newsletter-form input:focus {
+    outline: none;
+    border-color: #111827;
+    box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+}
+
+.newsletter-form button {
+    width: 100%;
+    background: #111827;
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.newsletter-form button:hover {
+    background: #374151;
+    transform: translateY(-2px);
+}
+
+.form-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.blogs-section {
+    padding: 80px 0;
+    background: #f8fafc;
+}
+
+.blog-card {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    height: 100%;
+    transition: all 0.3s ease;
+    border: 1px solid #f3f4f6;
+}
+
+.blog-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.blog-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.blog-date {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.blog-papers {
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.blog-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.blog-title a {
+    color: #111827;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.blog-title a:hover {
+    color: #374151;
+}
+
+.blog-excerpt {
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.blog-footer {
+    margin-top: auto;
+}
+
+.read-more {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #111827;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.read-more:hover {
+    color: #374151;
+    transform: translateX(4px);
+}
+
+.stats-section {
+    background: white;
+    padding: 60px 0;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 24px;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #111827;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-features {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .newsletter-wrapper {
+        padding: 40px 24px;
+    }
+    
+    .visual-card {
+        transform: none;
+        margin-top: 40px;
+    }
+}
+</style>
+{% endblock %}
