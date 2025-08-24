@@ -7,9 +7,37 @@ import requests
 import os
 import json
 import logging
+import time
+import threading
 from typing import Dict, List, Optional
 from .paper import Paper
 
+
+class RateLimiter:
+    """Simple rate limiter for API calls"""
+    def __init__(self, max_requests_per_minute=25):  # Conservative limit
+        self.max_requests = max_requests_per_minute
+        self.requests = []
+        self.lock = threading.Lock()
+    
+    def wait_if_needed(self):
+        """Wait if we're approaching the rate limit (loop version with debug output)"""
+        while True:
+            with self.lock:
+                now = time.time()
+                # Remove requests older than 1 minute
+                self.requests = [req_time for req_time in self.requests if now - req_time < 60]
+                if len(self.requests) < self.max_requests:
+                    # Add current request and exit
+                    self.requests.append(now)
+                    return
+                # Wait until we can make another request
+                sleep_time = 60 - (now - self.requests[0]) + 1
+                if sleep_time > 0:
+                    print(f"[RateLimiter] Hit limit, sleeping for {sleep_time:.2f} seconds...")
+                else:
+                    sleep_time = 1  # fallback to avoid busy loop
+            time.sleep(sleep_time)
 
 
 class LLMSummarizer:
@@ -28,6 +56,9 @@ class LLMSummarizer:
         # Groq configuration (primary)
         self.groq_api_key = os.environ.get("GROQ_API_KEY")
         self.groq_model = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+        
+        # Rate limiter for Groq API
+        self.groq_rate_limiter = RateLimiter(max_requests_per_minute=25)
         
         # Check if we should use Groq as primary
         if self.groq_api_key:
@@ -59,38 +90,10 @@ class LLMSummarizer:
         
         # Try Groq first if API key is available
         if self.groq_api_key:
-            try:
-                headers = {
-                    "Authorization": f"Bearer {self.groq_api_key}",
-                    "Content-Type": "application/json"
-                }
-                groq_payload = {
-                    "model": self.groq_model,
-                    "messages": [
-                        {"role": "system", "content": "You are an expert AI research communicator. Summarize research papers clearly and systematically."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "max_tokens": 1000
-                }
-                
-                self.logger.info(f"Generating response using Groq API with model: {self.groq_model}")
-                groq_resp = requests.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers=headers,
-                    json=groq_payload,
-                    timeout=90
-                )
-                groq_resp.raise_for_status()
-                groq_json = groq_resp.json()
-                choices = groq_json.get("choices", [])
-                if choices and choices[0].get("message", {}).get("content"):
-                    generated_text = choices[0]["message"]["content"].strip()
-                    self.logger.info(f"Successfully generated response using Groq API: {len(generated_text)} characters")
-                    return generated_text
-            except Exception as e:
-                self.logger.error(f"Groq API generation failed: {e}")
+            groq_response = self._generate_groq_response_with_retry(prompt)
+            if groq_response:
+                return groq_response
+            # If Groq failed, continue to fallback
 
         # Fallback to Ollama if Groq failed or unavailable
         if not self.use_groq_primary:
@@ -122,6 +125,92 @@ class LLMSummarizer:
         # Last resort - rule-based summary
         self.logger.warning("Using rule-based fallback summarization")
         return self._rule_based_summary(prompt)
+    
+    def _generate_groq_response_with_retry(self, prompt: str) -> str:
+        """Generate response using Groq API with exponential backoff retry logic"""
+        import random
+        
+        max_retries = 5
+        base_delay = 1  # Start with 1 second
+        max_delay = 60  # Max delay of 60 seconds
+        
+        headers = {
+            "Authorization": f"Bearer {self.groq_api_key}",
+            "Content-Type": "application/json"
+        }
+        groq_payload = {
+            "model": self.groq_model,
+            "messages": [
+                {"role": "system", "content": "You are an expert AI research communicator. Summarize research papers clearly and systematically."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_tokens": 1000
+        }
+        
+        for attempt in range(max_retries):
+            try:
+                # Apply rate limiting before making the request
+                self.groq_rate_limiter.wait_if_needed()
+                
+                self.logger.info(f"Generating response using Groq API (attempt {attempt + 1}/{max_retries}) with model: {self.groq_model}")
+                
+                groq_resp = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=groq_payload,
+                    timeout=90
+                )
+                
+                # Check for rate limit (429) specifically
+                if groq_resp.status_code == 429:
+                    # Get retry-after header if available
+                    retry_after = groq_resp.headers.get('Retry-After')
+                    if retry_after:
+                        try:
+                            delay = int(retry_after)
+                        except ValueError:
+                            delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    else:
+                        # Exponential backoff with jitter
+                        delay = min(base_delay * (2 ** attempt) + random.uniform(0, 1), max_delay)
+                    
+                    self.logger.warning(f"Rate limit hit (429). Retrying in {delay:.2f} seconds...")
+                    time.sleep(delay)
+                    continue
+                
+                groq_resp.raise_for_status()
+                groq_json = groq_resp.json()
+                choices = groq_json.get("choices", [])
+                if choices and choices[0].get("message", {}).get("content"):
+                    generated_text = choices[0]["message"]["content"].strip()
+                    self.logger.info(f"Successfully generated response using Groq API: {len(generated_text)} characters")
+                    return generated_text
+                else:
+                    raise Exception("No content in Groq API response")
+                    
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    # Rate limit - will be handled in next iteration
+                    continue
+                else:
+                    self.logger.error(f"Groq API HTTP error (attempt {attempt + 1}): {e}")
+                    if attempt == max_retries - 1:
+                        raise
+            except Exception as e:
+                self.logger.error(f"Groq API error (attempt {attempt + 1}): {e}")
+                if attempt == max_retries - 1:
+                    raise
+                
+                # For other errors, use exponential backoff
+                delay = min(base_delay * (2 ** attempt) + random.uniform(0, 1), max_delay)
+                self.logger.info(f"Retrying in {delay:.2f} seconds...")
+                time.sleep(delay)
+        
+        # If all retries failed, return None to trigger fallback
+        self.logger.error("All Groq API retries failed")
+        return None
     
     def _rule_based_summary(self, prompt: str) -> str:
         """Fallback rule-based summarization when Ollama is not available"""

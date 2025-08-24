@@ -151,16 +151,79 @@ class PaperFetchScheduler:
     def send_weekly_blog_email(self, blog_id):
         """Send the weekly blog email to all subscribers"""
         try:
-            import requests
+            # First try direct function call (more reliable)
+            if self._send_weekly_email_direct():
+                return True
             
-            # Call the email endpoint
-            response = requests.get(f"http://localhost:5000/send-weekly-email")
-            if response.status_code == 200:
-                logger.info("Weekly blog email sent successfully to subscribers")
-            else:
-                logger.error(f"Failed to send weekly email: {response.status_code}")
+            # Fallback to HTTP call if direct method fails
+            return self._send_weekly_email_http()
+            
         except Exception as e:
             logger.error(f"Error sending weekly email: {e}")
+            return False
+    
+    def _send_weekly_email_direct(self):
+        """Send weekly email by calling the function directly"""
+        try:
+            from .web_app import send_blog_email
+            
+            # Get the latest blog
+            blogs = self.db.get_all_blogs()
+            if not blogs:
+                logger.warning("No blogs found for email")
+                return False
+            
+            latest_blog = blogs[0]  # Most recent blog
+            
+            # Get all subscriber emails
+            subscribers = self.db.get_all_subscriber_emails()
+            
+            if not subscribers:
+                logger.warning("No subscribers found for email")
+                return False
+            
+            # Send email to each subscriber
+            sent_count = 0
+            for subscriber_email in subscribers:
+                if send_blog_email(subscriber_email, latest_blog):
+                    sent_count += 1
+            
+            logger.info(f"Weekly blog email sent directly to {sent_count}/{len(subscribers)} subscribers")
+            return sent_count > 0
+            
+        except Exception as e:
+            logger.error(f"Direct email sending failed: {e}")
+            return False
+    
+    def _send_weekly_email_http(self):
+        """Send weekly email via HTTP call (fallback method)"""
+        try:
+            import requests
+            import os
+            
+            # Determine the correct URL for the environment
+            if os.environ.get('FLY_APP_NAME'):
+                # Production environment - use the app's public URL
+                app_name = os.environ.get('FLY_APP_NAME')
+                base_url = f"https://{app_name}.fly.dev"
+            else:
+                # Development environment
+                base_url = "http://localhost:5000"
+            
+            # Call the email endpoint
+            email_url = f"{base_url}/send-weekly-email"
+            logger.info(f"Calling email endpoint: {email_url}")
+            
+            response = requests.get(email_url, timeout=30)
+            if response.status_code == 200:
+                logger.info("Weekly blog email sent successfully via HTTP")
+                return True
+            else:
+                logger.error(f"Failed to send weekly email via HTTP: {response.status_code} - {response.text}")
+                return False
+        except Exception as e:
+            logger.error(f"HTTP email sending failed: {e}")
+            return False
     
     def start(self):
         if self.is_running: 
