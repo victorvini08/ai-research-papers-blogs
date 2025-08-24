@@ -58,6 +58,29 @@
                                 <span class="badge bg-light text-dark me-2 mb-2">{{ author }}</span>
                                 {% endfor %}
                             </p>
+                            
+                            {% if paper.author_institutions %}
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-university me-1"></i>Institutions
+                            </h6>
+                            <div class="mb-3">
+                                {% if paper.author_institutions is string %}
+                                    {% set institutions = paper.author_institutions|eval %}
+                                {% else %}
+                                    {% set institutions = paper.author_institutions %}
+                                {% endif %}
+                                
+                                {% if institutions %}
+                                    {% for institution in institutions[:5] %}
+                                        {% if institution and institution.strip() %}
+                                        <span class="badge bg-light text-dark me-1 mb-1 border">
+                                            {{ institution.strip() }}
+                                        </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-4">
                             <div class="d-grid gap-2">
@@ -103,9 +126,75 @@
                     </h4>
                 </div>
                 <div class="card-body">
-                    <div class="markdown-content">
-                        {{ paper.summary | safe }}
-                    </div>
+                    {% if paper.summary is mapping %}
+                        <!-- Structured summary display -->
+                        <div class="structured-summary">
+                            {% if paper.summary.problem %}
+                            <div class="summary-section mb-4">
+                                <h5 class="text-dark mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                                    Problem
+                                </h5>
+                                <div class="summary-content p-3 bg-light rounded">
+                                    {{ paper.summary.problem | safe }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if paper.summary.key_innovation or paper.summary.innovation %}
+                            <div class="summary-section mb-4">
+                                <h5 class="text-dark mb-3">
+                                    <i class="fas fa-lightbulb me-2 text-success"></i>
+                                    Key Innovation
+                                </h5>
+                                <div class="summary-content p-3 bg-light rounded">
+                                    {{ (paper.summary.key_innovation or paper.summary.innovation) | safe }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if paper.summary.practical_impact or paper.summary.impact %}
+                            <div class="summary-section mb-4">
+                                <h5 class="text-dark mb-3">
+                                    <i class="fas fa-globe me-2 text-info"></i>
+                                    Practical Impact
+                                </h5>
+                                <div class="summary-content p-3 bg-light rounded">
+                                    {{ (paper.summary.practical_impact or paper.summary.impact) | safe }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if paper.summary.analogy %}
+                            <div class="summary-section mb-4">
+                                <h5 class="text-dark mb-3">
+                                    <i class="fas fa-lightbulb me-2 text-warning"></i>
+                                    Analogy / Intuitive Explanation
+                                </h5>
+                                <div class="summary-content p-3 bg-light rounded">
+                                    {{ paper.summary.analogy | safe }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if paper.summary.summary %}
+                            <div class="summary-section mb-4">
+                                <h5 class="text-dark mb-3">
+                                    <i class="fas fa-file-text me-2 text-primary"></i>
+                                    General Summary
+                                </h5>
+                                <div class="summary-content p-3 bg-light rounded">
+                                    {{ paper.summary.summary | safe }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <!-- Fallback for non-structured summaries -->
+                        <div class="markdown-content">
+                            {{ paper.summary | safe }}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

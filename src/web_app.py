@@ -276,10 +276,18 @@ def admin_dashboard():
         blogs_count = len(db.get_all_blogs())
         subscribers_count = len(db.get_all_subscriber_emails())
         
+        # Get LLM provider info
+        from .llm_summarizer import LLMSummarizer
+        summarizer = LLMSummarizer()
+        llm_provider = "Groq API" if summarizer.use_groq_primary else "Ollama"
+        groq_available = bool(summarizer.groq_api_key)
+        
         stats = {
             'papers_count': papers_count,
             'blogs_count': blogs_count,
             'subscribers_count': subscribers_count,
+            'llm_provider': llm_provider,
+            'groq_available': groq_available,
         }
         
         return render_template('admin_dashboard.html', stats=stats)
@@ -290,7 +298,8 @@ def admin_dashboard():
             'papers_count': 0,
             'blogs_count': 0,
             'subscribers_count': 0,
-            'daily_summaries_count': 0
+            'llm_provider': 'Unknown',
+            'groq_available': False,
         })
 
 @app.route('/api/fetch-papers', methods=['POST'])

@@ -47,6 +47,19 @@
                     </div>
                 </div>
             </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-number text-dark">{{ stats.llm_provider }}</div>
+                        <div class="stat-label">LLM Provider</div>
+                        {% if stats.groq_available %}
+                        <small class="text-success">Groq API Available</small>
+                        {% else %}
+                        <small class="text-warning">Using Ollama</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>

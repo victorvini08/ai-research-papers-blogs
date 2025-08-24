@@ -10,10 +10,12 @@ import logging
 from typing import Dict, List, Optional
 from .paper import Paper
 
+
+
 class LLMSummarizer:
     def __init__(self, model_name: str = "llama3", ollama_url: str = "http://localhost:11434"):
         """
-        Initialize LLM summarizer with Ollama
+        Initialize LLM summarizer with Groq as primary, Ollama as fallback
         
         Args:
             model_name: Ollama model name (default: llama3)
@@ -22,18 +24,25 @@ class LLMSummarizer:
         self.model_name = model_name
         self.ollama_url = ollama_url
         self.logger = logging.getLogger(__name__)
-        # Groq configuration
+        
+        # Groq configuration (primary)
         self.groq_api_key = os.environ.get("GROQ_API_KEY")
         self.groq_model = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
         
-        # Test connection to Ollama
-        try:
-            self._test_connection()
-        except Exception as e:
-            self.logger.warning(f"Could not connect to Ollama at {ollama_url}: {e}")
-            if self.groq_api_key:
-                self.logger.warning("Falling back to Groq API for LLM generation")
-            else:
+        # Check if we should use Groq as primary
+        if self.groq_api_key:
+            self.logger.info("Groq API key found - using Groq as primary LLM provider")
+            self.use_groq_primary = True
+        else:
+            self.logger.info("No Groq API key found - using Ollama as primary LLM provider")
+            self.use_groq_primary = False
+        
+        # Test connection to Ollama only if needed
+        if not self.use_groq_primary:
+            try:
+                self._test_connection()
+            except Exception as e:
+                self.logger.warning(f"Could not connect to Ollama at {ollama_url}: {e}")
                 self.logger.warning("Falling back to rule-based summarization")
     
     def _test_connection(self):
@@ -46,33 +55,9 @@ class LLMSummarizer:
             raise Exception(f"Failed to connect to Ollama: {e}")
     
     def _generate_response(self, prompt: str) -> str:
-        """Generate response using Ollama, fallback to Groq, then rule-based."""
-        # Try Ollama first
-        try:
-            payload = {
-                "model": self.model_name,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "max_tokens": 500
-                }
-            }
-            response = requests.post(
-                f"{self.ollama_url}/api/generate",
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            result = response.json()
-            generated_text = result.get('response', '').strip()
-            if generated_text:
-                return generated_text
-        except Exception as e:
-            self.logger.info(f"Ollama generation unavailable: {e}")
-
-        # Fallback to Groq if API key is available
+        """Generate response using Groq as primary, Ollama as fallback, then rule-based."""
+        
+        # Try Groq first if API key is available
         if self.groq_api_key:
             try:
                 headers = {
@@ -82,28 +67,60 @@ class LLMSummarizer:
                 groq_payload = {
                     "model": self.groq_model,
                     "messages": [
-                        {"role": "system", "content": "You are a helpful assistant for summarizing research papers."},
+                        {"role": "system", "content": "You are an expert AI research communicator. Summarize research papers clearly and systematically."},
                         {"role": "user", "content": prompt}
                     ],
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 800
+                    "max_tokens": 1000
                 }
+                
+                self.logger.info(f"Generating response using Groq API with model: {self.groq_model}")
                 groq_resp = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers=headers,
                     json=groq_payload,
-                    timeout=60
+                    timeout=90
                 )
                 groq_resp.raise_for_status()
                 groq_json = groq_resp.json()
                 choices = groq_json.get("choices", [])
                 if choices and choices[0].get("message", {}).get("content"):
-                    return choices[0]["message"]["content"].strip()
+                    generated_text = choices[0]["message"]["content"].strip()
+                    self.logger.info(f"Successfully generated response using Groq API: {len(generated_text)} characters")
+                    return generated_text
             except Exception as e:
                 self.logger.error(f"Groq API generation failed: {e}")
 
-        # Last resort
+        # Fallback to Ollama if Groq failed or unavailable
+        if not self.use_groq_primary:
+            try:
+                payload = {
+                    "model": self.model_name,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "top_p": 0.9,
+                        "max_tokens": 500
+                    }
+                }
+                response = requests.post(
+                    f"{self.ollama_url}/api/generate",
+                    json=payload,
+                    timeout=60
+                )
+                response.raise_for_status()
+                result = response.json()
+                generated_text = result.get('response', '').strip()
+                if generated_text:
+                    self.logger.info(f"Successfully generated response using Ollama: {len(generated_text)} characters")
+                    return generated_text
+            except Exception as e:
+                self.logger.info(f"Ollama generation unavailable: {e}")
+
+        # Last resort - rule-based summary
+        self.logger.warning("Using rule-based fallback summarization")
         return self._rule_based_summary(prompt)
     
     def _rule_based_summary(self, prompt: str) -> str:

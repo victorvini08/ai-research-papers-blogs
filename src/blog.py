@@ -218,6 +218,30 @@ def generate_blog_content(papers: List[Paper]) -> str:
             authors_text = ', '.join(paper.authors[:3])
             if len(paper.authors) > 3:
                 authors_text += f" et al. ({len(paper.authors)} authors)"
+            
+            # Add institution tags if available
+            institution_tags = ""
+            if hasattr(paper, 'author_institutions') and paper.author_institutions:
+                try:
+                    if isinstance(paper.author_institutions, str):
+                        institutions = eval(paper.author_institutions)
+                    else:
+                        institutions = paper.author_institutions
+                    
+                    if institutions and len(institutions) > 0:
+                        # Get unique institutions and limit to top 3
+                        unique_institutions = list(set([inst.strip() for inst in institutions if inst.strip()]))[:3]
+                        if unique_institutions:
+                            institution_tags = f"""
+                            <div class="institution-tags mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-university me-1"></i>
+                                    {', '.join(unique_institutions)}
+                                </small>
+                            </div>"""
+                except:
+                    pass  # Skip if there's an error parsing institutions
+            
             content += f"""
             <div class="paper-card">
                 <div class="paper-header">
@@ -229,6 +253,7 @@ def generate_blog_content(papers: List[Paper]) -> str:
                             <span class="category-badge">{paper.category}</span>
                             <span class="paper-date">{paper.published_data}</span>
                         </div>
+                        {institution_tags}
                     </div>
                 </div>
                 <div class="paper-content">
@@ -239,6 +264,11 @@ def generate_blog_content(papers: List[Paper]) -> str:
                         </a>
                         <a href="https://arxiv.org/pdf/{paper.arxiv_id}" class="btn btn-outline-primary" target="_blank">
                             <i class="fas fa-file-pdf"></i> PDF
+                        </a>
+                        <a href="/paper/{paper.arxiv_id}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Details
                         </a>
                     </div>
                 </div>
