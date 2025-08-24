@@ -233,7 +233,7 @@ class PaperFetchScheduler:
         try:
             self.scheduler.add_job(
                     func=self.fetch_and_persist_papers,
-                    trigger=CronTrigger(day_of_week='tue',hour=23, minute=33,timezone='Asia/Kolkata'),
+                    trigger=CronTrigger(day_of_week='sun',hour=5, minute=0,timezone='Asia/Kolkata'),
                     id='weekly_paper_fetch',
                     name='Weekly Research Papers Fetch',
                     replace_existing=True,
