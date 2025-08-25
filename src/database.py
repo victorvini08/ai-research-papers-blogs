@@ -409,7 +409,7 @@ class PaperDatabase:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, title, summary, paper_count, categories, published_date, created_at
+            SELECT id, title, summary, content, paper_count, categories, published_date, created_at
             FROM blogs 
             ORDER BY created_at DESC
         ''')
@@ -420,10 +420,11 @@ class PaperDatabase:
                 'id': row[0],
                 'title': row[1],
                 'summary': row[2],
-                'paper_count': row[3],
-                'categories': row[4],
-                'published_date': row[5],
-                'created_at': row[6]
+                'content': row[3],
+                'paper_count': row[4],
+                'categories': row[5],
+                'published_date': row[6],
+                'created_at': row[7]
             })
         
         conn.close()
