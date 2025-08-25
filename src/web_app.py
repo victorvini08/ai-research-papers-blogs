@@ -198,16 +198,16 @@ def send_blog_email(subscriber_email: str, blog: Dict) -> bool:
         msg['From'] = smtp_username
         msg['To'] = subscriber_email
         
-        # Create HTML content
+            # Create HTML content with full blog content
         html_content = f"""
         <html>
         <body>
-            <h2>AI Research Daily - Weekly Update</h2>
+            <h2>AI Research Weekly - Weekly Update</h2>
             <h3>{blog['title']}</h3>
             <p><strong>Published:</strong> {blog['published_date']}</p>
             <p><strong>Papers Covered:</strong> {blog['paper_count']}</p>
             <hr>
-            <div>{blog['summary']}</div>
+            <div>{blog['content']}</div>
             <hr>
             <p>Read the full blog post: <a href="{request.host_url}blog/{blog['id']}">Click here</a></p>
             <p>Unsubscribe: <a href="{request.host_url}unsubscribe?email={subscriber_email}">Click here</a></p>
