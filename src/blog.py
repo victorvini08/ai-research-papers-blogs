@@ -234,7 +234,7 @@ def generate_blog_content(papers: List[Paper]) -> str:
                         if unique_institutions:
                             institution_tags = f"""
                             <div class="institution-tags mt-2">
-                                <small class="text-muted">
+                                <small class="text-dark">
                                     <i class="fas fa-university me-1"></i>
                                     {', '.join(unique_institutions)}
                                 </small>

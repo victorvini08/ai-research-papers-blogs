@@ -101,8 +101,8 @@ class PaperQualityFilter:
         papers.sort(key=lambda x: x.quality_score, reverse=True)
 
         # Filter out papers with very low quality scores
-        filtered_papers = [p for p in papers if p.quality_score > 0.1]
-
+        filtered_papers = [p for p in papers if p.quality_score > 0.15]
+        
         logger.info(f"Filtered to {len(filtered_papers)} high-quality papers")
         return filtered_papers
 
@@ -218,9 +218,9 @@ class PaperQualityFilter:
         if h_indices:
             avg_h_index = sum(h_indices) / len(h_indices)
             # Normalize h-index (0-100 scale)
-            h_score = min(avg_h_index / 50.0, 1.0) * 0.6
-            score += h_score
-
+            h_score = min(avg_h_index / 50.0, 1.0)
+            score += h_score * 0.7
+        
         # Factor 2: Institution prestige (30% weight)
         institutions = author_info.get('institutions', [])
         institution_score = 0.0
@@ -229,12 +229,14 @@ class PaperQualityFilter:
                 institution_score = 1.0
                 break
         score += institution_score * 0.3
-
-        # Factor 4: Category relevance (10% weight)
+        
+        
+        # TODO: We can calculate category relevance by semantic similarity between paper details and category keywords
+        # Factor 3: Category relevance (10% weight)
         # All papers are pre-filtered by category, so they get full score
-        category_score = 1.0 * 0.1
-        score += category_score
-
+        # category_score = 1.0 * 0.1
+        # score += category_score
+        
         return score
 
     def is_prestigious_institution(self, institution_name: str) -> bool:

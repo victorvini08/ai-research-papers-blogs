@@ -10,11 +10,9 @@ def _parse_summary_field(summary_field):
     if not summary_field:
         return None
     try:
-        if summary_field.startswith('{'):
-            return json.loads(summary_field)
-        else:
-            return summary_field
-    except (json.JSONDecodeError, AttributeError):
+        # Always try to parse as JSON first
+        return json.loads(summary_field)
+    except (json.JSONDecodeError, TypeError):
         return summary_field
 
 class PaperDatabase:

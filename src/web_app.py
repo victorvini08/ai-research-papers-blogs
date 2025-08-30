@@ -78,7 +78,7 @@ def paper_detail(arxiv_id):
         'abstract': row[3],
         'categories': eval(row[4]) if row[4] else [],
         'published_date': row[5],
-        'summary': row[6],
+        'summary': db._parse_summary_field(row[6]),
         'category': row[7],
         'novelty_score': row[8],
         'source': row[9]
@@ -206,7 +206,7 @@ def send_blog_email(subscriber_email: str, blog: Dict) -> bool:
             <h3>{blog['title']}</h3>
             <p><strong>Published:</strong> {blog['published_date']}</p>
             <p><strong>Papers Covered:</strong> {blog['paper_count']}</p>
-            <p>Read the full blog post: <a href="{request.host_url}blog/{blog['id']}">Click here</a></p>
+            <p>Read the full blog post here for a much better understanding! <a href="{request.host_url}blog/{blog['id']}">Click here</a></p>
             <hr>
             <div>{blog['content']}</div>
             <hr>
