@@ -4,12 +4,14 @@ import time
 from typing import List, Dict
 from .paper import Paper
 import logging
+from sentence_transformers import SentenceTransformer, util
 
 logger = logging.getLogger(__name__)
 
+
 class PaperQualityFilter:
     """Filter papers based on author h-index and institution importance"""
-    
+
     def __init__(self):
         # Read API key from environment if provided
         self.semantic_scholar_api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
@@ -25,19 +27,19 @@ class PaperQualityFilter:
             # Tech Companies
             'openai', 'microsoft', 'google', 'meta', 'apple', 'amazon', 'nvidia', 'intel', 'ibm',
             'deepmind', 'anthropic', 'cohere', 'hugging face', 'stability ai', 'midjourney',
-            
+
             # Universities
             'stanford', 'mit', 'harvard', 'berkeley', 'cmu', 'princeton', 'yale', 'columbia',
             'university of oxford', 'university of cambridge', 'tsinghua',
-            
+
             # # Research Labs
             # 'bell labs', 'xerox parc', 'sri international', 'allen institute', 'max planck institute',
             # 'cnrs', 'fraunhofer', 'national institutes of health', 'nsf', 'darpa',
-            
+
             # Other Notable
             'netflix', 'spotify', 'uber', 'lyft', 'airbnb', 'salesforce', 'adobe', 'autodesk'
         }
-        
+
         # Institution name variations and aliases
         self.institution_aliases = {
             'stanford university': 'stanford',
@@ -69,46 +71,46 @@ class PaperQualityFilter:
             'airbnb data science': 'airbnb',
             'autodesk research': 'autodesk'
         }
-    
+
     def filter_papers(self, papers: List[Paper]) -> List[Paper]:
         """Filter papers based on quality criteria and assign quality scores"""
         logger.info(f"Filtering {len(papers)} papers based on quality criteria")
-        
+
         for i in range(len(papers)):
             paper = papers[i]
             try:
                 logger.info(f"Filtering paper {i} of {len(papers)}")
                 # Get author information from Semantic Scholar
                 author_info = self.get_authors_info(paper.authors)
-                
+
                 # Calculate quality score
                 quality_score = self.calculate_quality_score(paper, author_info)
                 paper.quality_score = quality_score
-                
+
                 # Add author metadata to paper
                 paper.author_h_indices = author_info.get('h_indices', [])
                 paper.author_institutions = author_info.get('institutions', [])
-                
+
             except Exception as e:
                 logger.error(f"Error processing paper {paper.arxiv_id}: {e}")
                 paper.quality_score = 0.0
                 paper.author_h_indices = []
                 paper.author_institutions = []
-        
+
         # Sort papers by quality score
         papers.sort(key=lambda x: x.quality_score, reverse=True)
-        
+
         # Filter out papers with very low quality scores
         filtered_papers = [p for p in papers if p.quality_score > 0.1]
-        
+
         logger.info(f"Filtered to {len(filtered_papers)} high-quality papers")
         return filtered_papers
-    
+
     def get_authors_info(self, author_names: List[str]) -> Dict:
         """Get author information from Semantic Scholar API"""
         h_indices = []
         institutions = []
-        
+
         for author_name in author_names[:5]:  # Limit to first 5 authors to avoid API rate limits
             try:
                 # Use cache when available
@@ -121,7 +123,7 @@ class PaperQualityFilter:
                 if author_info:
                     h_index = author_info.get('hIndex', 0)
                     h_indices.append(h_index)
-                    
+
                     # Get institution information
                     if 'affiliations' in author_info and author_info['affiliations'] is not None:
                         aff_value = author_info['affiliations']
@@ -145,19 +147,19 @@ class PaperQualityFilter:
                             inst_lower = inst_name.strip().lower()
                             if inst_lower:
                                 institutions.append(inst_lower)
-                
+
                 # Rate limiting
                 time.sleep(self.request_sleep_sec)
-                
+
             except Exception as e:
                 logger.warning(f"Could not fetch info for author {author_name}: {e}")
                 continue
-        
+
         return {
             'h_indices': h_indices,
             'institutions': institutions
         }
-    
+
     def search_author(self, author_name: str) -> Dict:
         """Search for author in Semantic Scholar"""
         url = f"{self.base_url}/author/search"
@@ -190,7 +192,8 @@ class PaperQualityFilter:
                             delay = (self.api_backoff_base ** attempt) * self.request_sleep_sec
                     else:
                         delay = (self.api_backoff_base ** attempt) * self.request_sleep_sec
-                    logger.warning(f"Rate limited by Semantic Scholar for '{author_name}'. Sleeping {delay:.2f}s before retry {attempt+1}/{self.api_retry_max}.")
+                    logger.warning(
+                        f"Rate limited by Semantic Scholar for '{author_name}'. Sleeping {delay:.2f}s before retry {attempt + 1}/{self.api_retry_max}.")
                     time.sleep(delay)
                     attempt += 1
                     continue
@@ -205,11 +208,11 @@ class PaperQualityFilter:
                 logger.warning(f"Error searching for author {author_name}: {e}")
                 return None
         return None
-    
+
     def calculate_quality_score(self, paper: Paper, author_info: Dict) -> float:
         """Calculate quality score based on multiple factors"""
         score = 0.0
-        
+
         # Factor 1: Author h-index (40% weight)
         h_indices = author_info.get('h_indices', [])
         if h_indices:
@@ -217,7 +220,7 @@ class PaperQualityFilter:
             # Normalize h-index (0-100 scale)
             h_score = min(avg_h_index / 50.0, 1.0) * 0.6
             score += h_score
-        
+
         # Factor 2: Institution prestige (30% weight)
         institutions = author_info.get('institutions', [])
         institution_score = 0.0
@@ -226,30 +229,62 @@ class PaperQualityFilter:
                 institution_score = 1.0
                 break
         score += institution_score * 0.3
-        
-        
+
         # Factor 4: Category relevance (10% weight)
         # All papers are pre-filtered by category, so they get full score
         category_score = 1.0 * 0.1
         score += category_score
-        
+
         return score
-    
+
     def is_prestigious_institution(self, institution_name: str) -> bool:
         """Check if institution is prestigious"""
         institution_lower = institution_name.lower()
-        
+
         # Check exact matches
         if institution_lower in self.prestigious_institutions:
             return True
-        
+
         # Check aliases
         if institution_lower in self.institution_aliases:
             return True
-        
+
         # Check partial matches for major institutions
         for prestigious in self.prestigious_institutions:
             if prestigious in institution_lower or institution_lower in prestigious:
                 return True
-        
+
         return False
+
+    def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
+        """Calculate cosine similarity between paper text and categories"""
+        # Initialize the sentence transformer model
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+
+        # Generate embeddings for categories
+        category_texts = []
+        category_names = list(categories.keys())
+
+        for category, keywords in categories.items():
+            category_text = f"{category} {' '.join(keywords)}"
+            category_texts.append(category_text)
+
+        category_embeddings = model.encode(category_texts, convert_to_tensor=True)
+
+        for i in range(len(unique_papers)):
+            paper = unique_papers[i]
+            logger.info(f"Calculating cosine score of paper {i} of total {len(unique_papers)} papers")
+            # Combine title and abstract for paper text
+            paper_text = f"{paper.title} {paper.abstract}"
+
+            # Generate embedding for paper text
+            paper_embedding = model.encode(paper_text, convert_to_tensor=True)
+
+            # Calculate cosine similarity between paper and categories
+            cosine_scores = util.cos_sim(paper_embedding, category_embeddings)
+
+            # Store cosine scores in paper object
+            paper.category_cosine_scores = {
+                category: score.item() for category, score in zip(categories, cosine_scores[0])
+            }
+            paper.category = max(paper.category_cosine_scores, key=paper.category_cosine_scores.get)

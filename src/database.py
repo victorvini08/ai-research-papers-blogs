@@ -71,6 +71,8 @@ class PaperDatabase:
             migrations.append("ALTER TABLE papers ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
         if 'updated_at' not in existing_columns:
             migrations.append("ALTER TABLE papers ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'category_cosine_scores' not in existing_columns:
+            migrations.append("ALTER TABLE papers ADD COLUMN category_cosine_scores TEXT DEFAULT '{}'")
 
         for stmt in migrations:
             try:
@@ -147,8 +149,8 @@ class PaperDatabase:
                 INSERT INTO papers (
                     arxiv_id, title, authors, abstract, categories, 
                     published_date, summary, category, novelty_score, source,
-                    quality_score, author_h_indices, author_institutions
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    quality_score, author_h_indices, author_institutions, category_cosine_scores
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 paper.arxiv_id,
                 paper.title,
@@ -162,7 +164,8 @@ class PaperDatabase:
                 paper.source or 'arxiv',
                 paper.quality_score or 0.0,
                 json.dumps(paper.author_h_indices) if paper.author_h_indices else '[]',
-                json.dumps(paper.author_institutions) if paper.author_institutions else '[]'
+                json.dumps(paper.author_institutions) if paper.author_institutions else '[]',
+                json.dumps(paper.category_cosine_scores) if paper.category_cosine_scores else '{}'
             ))
             
             conn.commit()
@@ -250,7 +253,7 @@ class PaperDatabase:
         
         cursor.execute('''
             SELECT arxiv_id, title, authors, abstract, categories, 
-                   published_date, summary, category, novelty_score, source
+                   published_date, summary, category, novelty_score, source, category_cosine_scores
             FROM papers 
             WHERE DATE(published_date) >= DATE('now', '-{} days')
             ORDER BY published_date DESC, novelty_score DESC
@@ -270,7 +273,8 @@ class PaperDatabase:
                 summary=_parse_summary_field(row[6]),
                 category=row[7],
                 novelty_score=row[8],
-                source=row[9]
+                source=row[9],
+                category_cosine_scores=row[10]
             )
             papers.append(paper)
         
