@@ -13,3 +13,4 @@ APScheduler==3.10.4
 PyMuPDF==1.26.3
 requests>=2.31.0
 markdown2>=2.4.0
+sentence-transformers==2.7.0
