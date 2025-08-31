@@ -1,6 +1,7 @@
 import os
 import logging
 from src.web_app import app
+from backfill_data import BackfillData
 
 # Configure logging to show INFO level messages
 logging.basicConfig(
@@ -12,4 +13,7 @@ logging.basicConfig(
 )
 
 if __name__ == "__main__":
+    # --- ONE-TIME BACKFILL: category cosine scores ---
+    BackfillData().backfill_category_cosine_scores()
+    # --- END BACKFILL ---
     app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

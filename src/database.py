@@ -217,7 +217,8 @@ class PaperDatabase:
         
         cursor.execute('''
             SELECT arxiv_id, title, authors, abstract, categories, 
-                   published_date, summary, category, novelty_score, source
+                   published_date, summary, category, novelty_score, source, 
+                   quality_score, author_h_indices, author_institutions, category_cosine_scores
             FROM papers 
             WHERE DATE(published_date) = ?
             ORDER BY novelty_score DESC
@@ -237,7 +238,11 @@ class PaperDatabase:
                 summary=_parse_summary_field(row[6]),
                 category=row[7],
                 novelty_score=row[8],
-                source=row[9]
+                source=row[9], 
+                quality_score=row[10],
+                author_h_indices=json.loads(row[11]) if row[11] else [],
+                author_institutions=json.loads(row[12]) if row[12] else [],
+                category_cosine_scores=json.loads(row[13]) if row[13] else {}
             )
             papers.append(paper)
         
@@ -251,10 +256,11 @@ class PaperDatabase:
         
         cursor.execute('''
             SELECT arxiv_id, title, authors, abstract, categories, 
-                   published_date, summary, category, novelty_score, source, category_cosine_scores
+                   published_date, summary, category, novelty_score, source, 
+                   quality_score, author_h_indices, author_institutions, category_cosine_scores
             FROM papers 
             WHERE DATE(published_date) >= DATE('now', '-{} days')
-            ORDER BY published_date DESC, novelty_score DESC
+            ORDER BY published_date DESC
         '''.format(days))
         
         papers = []
@@ -272,7 +278,48 @@ class PaperDatabase:
                 category=row[7],
                 novelty_score=row[8],
                 source=row[9],
-                category_cosine_scores=row[10]
+                quality_score=row[10],
+                author_h_indices=json.loads(row[11]) if row[11] else [],
+                author_institutions=json.loads(row[12]) if row[12] else [],
+                category_cosine_scores=json.loads(row[13]) if row[13] else {}
+            )
+            papers.append(paper)
+        
+        conn.close()
+        return papers
+    
+    def get_all_papers(self) -> List[Paper]:
+        """Get all papers in the database"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT arxiv_id, title, authors, abstract, categories, 
+                   published_date, summary, category, novelty_score, source, 
+                   quality_score, author_h_indices, author_institutions, category_cosine_scores
+            FROM papers 
+            ORDER BY published_date DESC
+        ''')
+        
+        papers = []
+        for row in cursor.fetchall():
+            paper = Paper(
+                arxiv_id=row[0],
+                title=row[1],
+                authors=json.loads(row[2]),
+                abstract=row[3],
+                categories=json.loads(row[4]),
+                published_data=row[5],
+                pdf_url=f"https://arxiv.org/pdf/{row[0]}",
+                entry_id=f"https://arxiv.org/abs/{row[0]}",
+                summary=_parse_summary_field(row[6]),
+                category=row[7],
+                novelty_score=row[8],
+                source=row[9],
+                quality_score=row[10],
+                author_h_indices=json.loads(row[11]) if row[11] else [],
+                author_institutions=json.loads(row[12]) if row[12] else [],
+                category_cosine_scores=json.loads(row[13]) if row[13] else {}
             )
             papers.append(paper)
         
@@ -295,6 +342,42 @@ class PaperDatabase:
         
         conn.commit()
         conn.close()
+    
+    def update_paper_fields(self, arxiv_id: str, fields: dict):
+        """
+        General method to update any set of fields for a paper given its arxiv_id.
+        Usage: update_paper_fields('arxiv_id', {'category': 'New Category', 'quality_score': 0.9})
+        Automatically updates the updated_at timestamp.
+        """
+        import json
+        if not fields:
+            return False
+        allowed_fields = {
+            'title', 'authors', 'abstract', 'categories', 'published_date', 'summary', 'category',
+            'novelty_score', 'source', 'quality_score', 'author_h_indices', 'author_institutions',
+            'category_cosine_scores'
+        }
+        set_clauses = []
+        values = []
+        for key, value in fields.items():
+            if key not in allowed_fields:
+                continue
+            # Serialize lists/dicts as JSON
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value)
+            set_clauses.append(f"{key} = ?")
+            values.append(value)
+        if not set_clauses:
+            return False
+        set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+        sql = f"UPDATE papers SET {', '.join(set_clauses)} WHERE arxiv_id = ?"
+        values.append(arxiv_id)
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql, values)
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
     
     def save_daily_summary(self, date: str, summary_content: str, paper_count: int):
         """Save the daily summary"""

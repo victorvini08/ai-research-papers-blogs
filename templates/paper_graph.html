@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Paper Clustering - {{ config.SITE_NAME }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 100%);
+            color: white;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #aaa;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: linear-gradient(45deg, #4a5568, #2d3748);
+            color: white;
+            border: 1px solid #4a5568;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #5a6578, #3d4758);
+            transform: translateY(-1px);
+        }
+
+        button.active {
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            color: #000;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        label {
+            color: #ccc;
+            font-size: 0.9em;
+        }
+
+        #visualization {
+            width: 100%;
+            height: 700px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            background: radial-gradient(circle at center, #1a1a3a 0%, #0f0f23 100%);
+            overflow: hidden;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #555;
+            font-size: 13px;
+            max-width: 350px;
+            pointer-events: none;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .paper-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #00d4ff;
+            font-size: 14px;
+        }
+
+        .paper-category {
+            color: #00ff88;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .paper-authors {
+            color: #ccc;
+            font-size: 11px;
+            margin-bottom: 5px;
+            font-style: italic;
+        }
+
+        .similarity-scores {
+            font-size: 11px;
+            color: #ccc;
+            margin-top: 8px;
+        }
+
+        .score-bar {
+            display: flex;
+            align-items: center;
+            margin: 2px 0;
+        }
+
+        .score-label {
+            width: 120px;
+            font-size: 10px;
+        }
+
+        .score-bar-bg {
+            flex: 1;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin: 0 5px;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .score-value {
+            width: 30px;
+            text-align: right;
+            font-size: 10px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #aaa;
+            flex-wrap: wrap;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #4a5568, #2d3748);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-button:hover {
+            background: linear-gradient(45deg, #5a6578, #3d4758);
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+            font-size: 1.2em;
+            color: #aaa;
+        }
+
+        .loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00d4ff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('papers_list') }}" class="back-button">← Back to Papers</a>
+    
+    <div class="container">
+        <h1>AI Research Paper Clustering</h1>
+        <p class="subtitle">Interactive visualization of research papers clustered by semantic similarity</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Force Strength:</label>
+                <input type="range" id="forceStrength" min="50" max="500" value="200">
+            </div>
+            <div class="control-group">
+                <label>Link Distance:</label>
+                <input type="range" id="linkDistance" min="50" max="200" value="100">
+            </div>
+            <div class="control-group">
+                <button id="pauseBtn">Pause</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+        </div>
+
+        <div id="visualization"></div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00ff88; box-shadow: 0 0 10px #00ff88;"></div>
+                <span>Generative AI & LLMs</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00d4ff; box-shadow: 0 0 10px #00d4ff;"></div>
+                <span>Computer Vision & Multimodal</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b; box-shadow: 0 0 10px #ff6b6b;"></div>
+                <span>Agentic AI</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd93d; box-shadow: 0 0 10px #ffd93d;"></div>
+                <span>AI in Healthcare</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff9ff3; box-shadow: 0 0 10px #ff9ff3;"></div>
+                <span>Explainable & Ethical AI</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <span id="paperCount">Papers: 0</span>
+            <span id="categoryCount">Categories: 5</span>
+            <span>Drag nodes to explore • Hover for details • Click papers to view details</span>
+        </div>
+    </div>
+
+    <script>
+        // Categories configuration
+        const categories = [
+            { id: 'gen-ai', name: 'Generative AI & LLMs', color: '#00ff88' },
+            { id: 'cv-multimodal', name: 'Computer Vision & Multimodal AI', color: '#00d4ff' },
+            { id: 'agentic', name: 'Agentic AI', color: '#ff6b6b' },
+            { id: 'healthcare', name: 'AI in Healthcare', color: '#ffd93d' },
+            { id: 'explainable', name: 'Explainable & Ethical AI', color: '#ff9ff3' }
+        ];
+
+        // Visualization setup
+        const width = 1200;
+        const height = 700;
+        const centerStrength = 0.1;
+        let forceStrength = 200;
+        let linkDistance = 100;
+
+        // Get papers data from server-side rendering
+        const papersData = {{ papers|tojson|safe }};
+        
+        // Debug logging
+        console.log('Papers data received:', papersData);
+        console.log('Number of papers:', papersData.length);
+        if (papersData.length > 0) {
+            console.log('Sample paper:', papersData[0]);
+        }
+
+        // Create SVG
+        const svg = d3.select('#visualization')
+            .append('svg')
+            .attr('width', '100%')
+            .attr('height', '100%')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .style('background', 'transparent');
+
+        // Create tooltip
+        const tooltip = d3.select('body')
+            .append('div')
+            .attr('class', 'tooltip')
+            .style('opacity', 0);
+        
+        // Initialize visualization with the data
+        createVisualization(papersData);
+
+        // Process data
+        function processData(papers) {
+            const nodes = [];
+            const links = [];
+
+            // Add category nodes (larger, central)
+            categories.forEach((cat, i) => {
+                nodes.push({
+                    id: cat.id,
+                    name: cat.name,
+                    type: 'category',
+                    color: cat.color,
+                    size: 20,
+                    fx: width/2 + Math.cos(i * 2 * Math.PI / categories.length) * 200,
+                    fy: height/2 + Math.sin(i * 2 * Math.PI / categories.length) * 200
+                });
+            });
+
+            // Add paper nodes
+            papers.forEach((paper, i) => {
+                // Find best matching category
+                let bestCategory = null;
+                let maxScore = 0;
+                
+                // Use the category scores from your data - map the actual category names to our visualization IDs
+                const categoryScores = {
+                    'gen-ai': paper.category_scores?.['Generative AI & LLMs'] || 0,
+                    'cv-multimodal': paper.category_scores?.['Computer Vision & MultiModal AI'] || 0,
+                    'agentic': paper.category_scores?.['Agentic AI'] || 0,
+                    'healthcare': paper.category_scores?.['AI in healthcare'] || 0,
+                    'explainable': paper.category_scores?.['Explainable & Ethical AI'] || 0
+                };
+
+                Object.entries(categoryScores).forEach(([catId, score]) => {
+                    if (score > maxScore) {
+                        maxScore = score;
+                        bestCategory = catId;
+                    }
+                });
+
+                const categoryColor = categories.find(c => c.id === bestCategory)?.color || '#ffffff';
+                
+                nodes.push({
+                    id: paper.arxiv_id,
+                    name: paper.title,
+                    authors: paper.authors,
+                    abstract: paper.abstract,
+                    type: 'paper',
+                    color: categoryColor,
+                    size: 6,
+                    scores: categoryScores,
+                    primaryCategory: bestCategory,
+                    maxScore: maxScore,
+                    arxiv_id: paper.arxiv_id
+                });
+
+                // Create links to categories based on similarity scores
+                Object.entries(categoryScores).forEach(([catId, score]) => {
+                    if (score > 0.1) { // Only show significant connections
+                        links.push({
+                            source: paper.arxiv_id,
+                            target: catId,
+                            strength: score,
+                            distance: (1 - score) * linkDistance * 2
+                        });
+                    }
+                });
+            });
+
+            return { nodes, links };
+        }
+
+        function createVisualization(papers) {
+            const data = processData(papers);
+            
+            // Update stats
+            document.getElementById('paperCount').textContent = `Papers: ${papers.length}`;
+
+            // Clear previous visualization
+            svg.selectAll('*').remove();
+
+            // Create force simulation
+            const simulation = d3.forceSimulation(data.nodes)
+                .force('link', d3.forceLink(data.links)
+                    .id(d => d.id)
+                    .distance(d => d.distance)
+                    .strength(d => d.strength * 0.3)
+                )
+                .force('charge', d3.forceManyBody()
+                    .strength(d => d.type === 'category' ? -forceStrength * 3 : -forceStrength * 0.5)
+                )
+                .force('center', d3.forceCenter(width / 2, height / 2).strength(centerStrength))
+                .force('collision', d3.forceCollide()
+                    .radius(d => d.size + 2)
+                );
+
+            // Create links
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(data.links)
+                .enter().append('line')
+                .attr('stroke', d => {
+                    const targetNode = data.nodes.find(n => n.id === d.target);
+                    return targetNode ? targetNode.color : '#666';
+                })
+                .attr('stroke-opacity', d => d.strength * 0.6)
+                .attr('stroke-width', d => Math.max(0.5, d.strength * 2));
+
+            // Create nodes
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(data.nodes)
+                .enter().append('circle')
+                .attr('r', d => d.size)
+                .attr('fill', d => d.color)
+                .attr('stroke', d => d.type === 'category' ? '#fff' : 'none')
+                .attr('stroke-width', d => d.type === 'category' ? 2 : 0)
+                .style('filter', d => `drop-shadow(0 0 ${d.type === 'category' ? 15 : 8}px ${d.color})`)
+                .style('cursor', d => d.type === 'paper' ? 'pointer' : 'default')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended)
+                );
+
+            // Add labels for categories
+            const labels = svg.append('g')
+                .selectAll('text')
+                .data(data.nodes.filter(d => d.type === 'category'))
+                .enter().append('text')
+                .text(d => d.name)
+                .attr('text-anchor', 'middle')
+                .attr('dy', -25)
+                .attr('fill', '#fff')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .style('pointer-events', 'none')
+                .style('text-shadow', '0 0 5px rgba(0,0,0,0.8)');
+
+            // Add hover effects
+            node.on('mouseover', function(event, d) {
+                if (d.type === 'paper') {
+                    // Highlight connected links
+                    link.style('stroke-opacity', l => 
+                        (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.1
+                    );
+
+                    // Show tooltip
+                    const scoresText = Object.entries(d.scores)
+                        .map(([cat, score]) => {
+                            const catName = categories.find(c => c.id === cat)?.name || cat;
+                            const percentage = (score * 100).toFixed(1);
+                            return `
+                                <div class="score-bar">
+                                    <div class="score-label">${catName}</div>
+                                    <div class="score-bar-bg">
+                                        <div class="score-bar-fill" style="width: ${percentage}%; background: ${categories.find(c => c.id === cat)?.color || '#ccc'};"></div>
+                                    </div>
+                                    <div class="score-value">${percentage}%</div>
+                                </div>
+                            `;
+                        })
+                        .join('');
+
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', .9);
+                    tooltip.html(`
+                        <div class="paper-title">${d.name}</div>
+                        <div class="paper-authors">${d.authors}</div>
+                        <div class="paper-category">Primary: ${categories.find(c => c.id === d.primaryCategory)?.name}</div>
+                        <div class="similarity-scores">${scoresText}</div>
+                    `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+                }
+            })
+            .on('mouseout', function(event, d) {
+                if (d.type === 'paper') {
+                    link.style('stroke-opacity', d => d.strength * 0.6);
+                    tooltip.transition()
+                        .duration(500)
+                        .style('opacity', 0);
+                }
+            })
+            .on('click', function(event, d) {
+                if (d.type === 'paper') {
+                    // Navigate to paper details page
+                    window.open(`/paper/${d.arxiv_id}`, '_blank');
+                }
+            });
+
+            // Update positions on tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+
+                labels
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                if (d.type !== 'category') {
+                    d.fx = null;
+                    d.fy = null;
+                }
+            }
+
+            // Control handlers
+            document.getElementById('forceStrength').addEventListener('input', function() {
+                forceStrength = this.value;
+                simulation.force('charge', d3.forceManyBody()
+                    .strength(d => d.type === 'category' ? -forceStrength * 3 : -forceStrength * 0.5)
+                );
+                simulation.alpha(0.3).restart();
+            });
+
+            document.getElementById('linkDistance').addEventListener('input', function() {
+                linkDistance = this.value;
+                simulation.force('link').distance(d => d.distance);
+                simulation.alpha(0.3).restart();
+            });
+
+            document.getElementById('pauseBtn').addEventListener('click', function() {
+                if (simulation.alpha() > 0) {
+                    simulation.stop();
+                    this.textContent = 'Resume';
+                } else {
+                    simulation.alpha(0.3).restart();
+                    this.textContent = 'Pause';
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                // Reset category positions
+                data.nodes.forEach((node, i) => {
+                    if (node.type === 'category') {
+                        const catIndex = categories.findIndex(c => c.id === node.id);
+                        node.fx = width/2 + Math.cos(catIndex * 2 * Math.PI / categories.length) * 200;
+                        node.fy = height/2 + Math.sin(catIndex * 2 * Math.PI / categories.length) * 200;
+                    } else {
+                        node.fx = null;
+                        node.fy = null;
+                    }
+                });
+                simulation.alpha(0.5).restart();
+                document.getElementById('pauseBtn').textContent = 'Pause';
+            });
+
+            return simulation;
+        }
+
+        // Initialize visualization
+        loadPapersData();
+    </script>
+</body>
+</html>

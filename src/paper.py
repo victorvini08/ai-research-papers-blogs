@@ -9,7 +9,8 @@ from config import Config
 
 class Paper():
     def __init__(self, arxiv_id, title, authors, abstract, categories, published_data, pdf_url, entry_id,
-                 summary=None, category=None, novelty_score=None, source=None, category_cosine_scores=None):
+                 summary=None, category=None, novelty_score=None, source=None, 
+                 quality_score=0.0, author_h_indices=None, author_institutions=None, category_cosine_scores=None):
         self.arxiv_id = arxiv_id
         self.title = title
         self.authors = authors
@@ -22,10 +23,10 @@ class Paper():
         self.category = category
         self.novelty_score = novelty_score
         self.source = source
-        self.quality_score = 0.0
-        self.author_h_indices = []
-        self.author_institutions = []
-        self.category_cosine_scores = {} # Dictionary
+        self.quality_score = quality_score
+        self.author_h_indices = author_h_indices
+        self.author_institutions = author_institutions
+        self.category_cosine_scores = category_cosine_scores
 
     def to_dict(self):
         """Convert Paper object to dictionary for database operations"""

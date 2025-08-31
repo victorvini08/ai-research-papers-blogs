@@ -9,6 +9,8 @@ kill_timeout = 5
 [env]
   PORT = "8080"
   FLASK_ENV = "production"
+  CUDA_VISIBLE_DEVICES = ""
+  TORCH_CUDA_AVAILABLE = "false"
   DATABASE_PATH = "/data/papers.db"
 
 [http_service]

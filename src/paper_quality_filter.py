@@ -261,7 +261,7 @@ class PaperQualityFilter:
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
         """Calculate cosine similarity between paper text and categories"""
         # Initialize the sentence transformer model
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+        model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 
         # Generate embeddings for categories
         category_texts = []
@@ -275,6 +275,9 @@ class PaperQualityFilter:
 
         for i in range(len(unique_papers)):
             paper = unique_papers[i]
+            if paper.category_cosine_scores:
+                continue
+            
             logger.info(f"Calculating cosine score of paper {i} of total {len(unique_papers)} papers")
             # Combine title and abstract for paper text
             paper_text = f"{paper.title} {paper.abstract}"

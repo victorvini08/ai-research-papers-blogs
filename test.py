@@ -19,36 +19,11 @@ logging.basicConfig(
 
 def main():
     db = PaperDatabase()
-    papers = db.get_recent_papers(days=70)
-    categories = {
-        "Generative AI & LLMs": [
-            "large language model", "llm", "gpt", "transformer"
-        ],
-        "Computer Vision & MultiModal AI": [
-            "computer vision", "image", "vision", "multimodal", "multi-modal", "video", "segmentation"
-        ],
-        "Agentic AI": [
-            "agent", "agentic", "autonomous agent", "multi-agent", "rl", "reinforcement learning"
-        ],
-        "AI in healthcare": [
-            "healthcare", "medical imaging", "disease diagnosis", "radiology", "clinical", "drug discovery",
-            "biomedical"
-        ],
-        "Explainable & Ethical AI": [
-            "explainable", "interpretability", "fairness", "ethics", "responsible ai", "bias", "transparency"
-        ]
-    }
-    paper_quality_filter = PaperQualityFilter()
-    paper_quality_filter.calculate_cosine_score(papers[:10], categories)
-
-    for i in range(10):
-        print("+++++++++++++++++++++++++++++++++++++")
-        print("category of ppr is: ", papers[i].category)
-        print("title of ppr is:", papers[i].title)
-        print("abstract of ppr is:", papers[i].abstract)
-        print("score of ppr is:", papers[i].category_cosine_scores)
-        print("+++++++++++++++++++++++++++++++++++++")
-
+    papers = db.get_all_papers()
+    
+    for paper in papers[:10]:
+        print(paper.title, paper.category, paper.category_cosine_scores)
+    
 
     # count = 0
     # for paper in papers:

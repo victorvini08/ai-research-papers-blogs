@@ -98,6 +98,30 @@ def blog_detail(blog_id):
     blog = db.get_blog_by_id(blog_id)
     if not blog:
         return render_template('404.html', message="Blog post not found"), 404
+
+@app.route('/paper-graph')
+def paper_graph():
+    """View the interactive paper clustering graph"""
+    papers = db.get_all_papers()
+    app.logger.info(f"Found {len(papers)} papers for paper graph")
+    # Convert papers to JSON-serializable format with category scores
+    papers_data = []
+    for paper in papers:
+        # Use the existing category_cosine_scores directly
+        category_scores = paper.category_cosine_scores if hasattr(paper, 'category_cosine_scores') else {}
+        
+        paper_data = {
+            'arxiv_id': paper.arxiv_id,
+            'title': paper.title,
+            'authors': paper.authors,
+            'abstract': paper.abstract,
+            'category': paper.category,
+            'category_scores': category_scores,
+            'published_date': paper.published_data
+        }
+        papers_data.append(paper_data)
+    app.logger.info(f"Prepared {len(papers_data)} papers for rendering in paper graph")
+    return render_template('paper_graph.html', papers=papers_data)
     
     return render_template('blog_detail.html', blog=blog)
 
