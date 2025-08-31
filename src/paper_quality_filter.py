@@ -270,15 +270,16 @@ class PaperQualityFilter:
             logger.info("Using TF-IDF for cosine similarity (no external APIs needed)")
             
             def get_tfidf_embeddings(texts):
-                """Get TF-IDF embeddings"""
-                # Initialize TF-IDF vectorizer
+                """Get TF-IDF embeddings with memory optimization"""
+                # Initialize TF-IDF vectorizer with memory-efficient settings
                 vectorizer = TfidfVectorizer(
-                    max_features=1000,
+                    max_features=500,  # Reduced from 1000
                     stop_words='english',
-                    ngram_range=(1, 2),
+                    ngram_range=(1, 1),  # Reduced from (1, 2) to save memory
                     min_df=1,
-                    max_df=0.95,
-                    lowercase=True
+                    max_df=0.9,  # Slightly reduced
+                    lowercase=True,
+                    dtype=np.float32  # Use float32 instead of float64 to save memory
                 )
                 
                 # Fit and transform texts
@@ -295,53 +296,61 @@ class PaperQualityFilter:
                 category_text = f"{category} {' '.join(keywords)}"
                 category_texts.append(category_text)
 
-            # Combine all texts for vectorization
-            all_texts = category_texts + [f"{paper.title} {paper.abstract}" for paper in unique_papers if not paper.category_cosine_scores]
+            # Process papers in small batches to avoid memory issues
+            batch_size = 5  # Small batch size for memory efficiency
+            papers_needing_scores = [p for p in unique_papers if not p.category_cosine_scores]
             
-            if not all_texts:
+            if not papers_needing_scores:
                 logger.info("No papers need category scores")
                 return
             
-            logger.info(f"Processing {len(all_texts)} texts with TF-IDF...")
+            logger.info(f"Processing {len(papers_needing_scores)} papers in batches of {batch_size}...")
             
-            # Get TF-IDF embeddings for all texts
-            tfidf_matrix = get_tfidf_embeddings(all_texts)
+            # First, get category embeddings
+            logger.info(f"Getting embeddings for {len(category_texts)} categories...")
+            category_tfidf = get_tfidf_embeddings(category_texts)
             
-            # Extract category vectors (first len(categories) rows)
-            category_vectors = tfidf_matrix[:len(categories)]
-            
-            # Extract paper vectors (remaining rows)
-            paper_vectors = tfidf_matrix[len(categories):]
-            
-            # Calculate similarities for each paper
-            paper_idx = 0
-            for i, paper in enumerate(unique_papers):
-                if paper.category_cosine_scores:
-                    continue
+            # Process papers in batches
+            for batch_start in range(0, len(papers_needing_scores), batch_size):
+                batch_end = min(batch_start + batch_size, len(papers_needing_scores))
+                batch_papers = papers_needing_scores[batch_start:batch_end]
                 
-                if paper_idx >= len(paper_vectors):
-                    break
+                # Prepare paper texts for this batch
+                paper_texts = []
+                for paper in batch_papers:
+                    paper_text = f"{paper.title} {paper.abstract}"
+                    paper_texts.append(paper_text)
                 
-                logger.info(f"Calculating similarity for paper {i + 1} of {len(unique_papers)}")
+                logger.info(f"Processing batch {batch_start//batch_size + 1} ({batch_start+1}-{batch_end} of {len(papers_needing_scores)})")
                 
-                # Get paper vector
-                paper_vector = paper_vectors[paper_idx:paper_idx+1]
+                # Get TF-IDF embeddings for this batch of papers
+                paper_tfidf = get_tfidf_embeddings(paper_texts)
                 
-                # Calculate cosine similarity with all categories
-                similarities = cosine_similarity(paper_vector, category_vectors).flatten()
+                # Calculate similarities for each paper in this batch
+                for i, paper in enumerate(batch_papers):
+                    logger.info(f"Calculating similarity for paper {batch_start + i + 1} of {len(papers_needing_scores)}")
+                    
+                    # Get paper vector
+                    paper_vector = paper_tfidf[i:i+1]
+                    
+                    # Calculate cosine similarity with all categories
+                    similarities = cosine_similarity(paper_vector, category_tfidf).flatten()
+                    
+                    # Store scores
+                    paper.category_cosine_scores = {
+                        category: float(score) for category, score in zip(category_names, similarities)
+                    }
+                    
+                    # Set the category to the one with highest similarity
+                    best_category_idx = np.argmax(similarities)
+                    paper.category = category_names[best_category_idx]
+                    
+                    logger.info(f"Paper {batch_start + i + 1} scores: {paper.category_cosine_scores}")
                 
-                # Store scores
-                paper.category_cosine_scores = {
-                    category: float(score) for category, score in zip(category_names, similarities)
-                }
-                
-                # Set the category to the one with highest similarity
-                best_category_idx = np.argmax(similarities)
-                paper.category = category_names[best_category_idx]
-                
-                logger.info(f"Paper {i + 1} scores: {paper.category_cosine_scores}")
-                
-                paper_idx += 1
+                # Clear memory after each batch
+                del paper_tfidf
+                import gc
+                gc.collect()
                 
         except Exception as e:
             logger.error(f"Error during Groq API embedding calculation: {e}")
