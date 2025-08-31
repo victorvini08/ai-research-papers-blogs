@@ -262,44 +262,68 @@ class PaperQualityFilter:
 
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
         """Calculate cosine similarity between paper text and categories"""
+        # Force CPU-only environment before importing sentence_transformers
+        import os
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        os.environ['TORCH_CUDA_AVAILABLE'] = 'false'
+        
         # Lazy import to avoid CUDA issues in production
         try:
+            import torch
+            # Force PyTorch to use CPU
+            torch.set_default_tensor_type('torch.FloatTensor')
+            
             from sentence_transformers import SentenceTransformer, util
+            logger.info("Successfully imported sentence_transformers")
         except ImportError as e:
             logger.error(f"Failed to import sentence_transformers: {e}")
             logger.error("This feature requires sentence_transformers to be installed")
             return
+        except Exception as e:
+            logger.error(f"Error setting up sentence_transformers: {e}")
+            return
         
-        # Initialize the sentence transformer model
-        model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+        try:
+            # Initialize the sentence transformer model with explicit CPU device
+            logger.info("Initializing SentenceTransformer model...")
+            model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+            logger.info("SentenceTransformer model initialized successfully")
 
-        # Generate embeddings for categories
-        category_texts = []
-        category_names = list(categories.keys())
+            # Generate embeddings for categories
+            category_texts = []
+            category_names = list(categories.keys())
 
-        for category, keywords in categories.items():
-            category_text = f"{category} {' '.join(keywords)}"
-            category_texts.append(category_text)
+            for category, keywords in categories.items():
+                category_text = f"{category} {' '.join(keywords)}"
+                category_texts.append(category_text)
 
-        category_embeddings = model.encode(category_texts, convert_to_tensor=True)
+            logger.info(f"Generating embeddings for {len(category_texts)} categories...")
+            category_embeddings = model.encode(category_texts, convert_to_tensor=True)
+            logger.info("Category embeddings generated successfully")
 
-        for i in range(len(unique_papers)):
-            paper = unique_papers[i]
-            if paper.category_cosine_scores:
-                continue
-            
-            logger.info(f"Calculating cosine score of paper {i} of total {len(unique_papers)} papers")
-            # Combine title and abstract for paper text
-            paper_text = f"{paper.title} {paper.abstract}"
+            for i in range(len(unique_papers)):
+                paper = unique_papers[i]
+                if paper.category_cosine_scores:
+                    continue
+                
+                logger.info(f"Calculating cosine score of paper {i} of total {len(unique_papers)} papers")
+                # Combine title and abstract for paper text
+                paper_text = f"{paper.title} {paper.abstract}"
 
-            # Generate embedding for paper text
-            paper_embedding = model.encode(paper_text, convert_to_tensor=True)
+                # Generate embedding for paper text
+                paper_embedding = model.encode(paper_text, convert_to_tensor=True)
 
-            # Calculate cosine similarity between paper and categories
-            cosine_scores = util.cos_sim(paper_embedding, category_embeddings)
+                # Calculate cosine similarity between paper and categories
+                cosine_scores = util.cos_sim(paper_embedding, category_embeddings)
 
-            # Store cosine scores in paper object
-            paper.category_cosine_scores = {
-                category: score.item() for category, score in zip(categories, cosine_scores[0])
-            }
-            paper.category = max(paper.category_cosine_scores, key=paper.category_cosine_scores.get)
+                # Store cosine scores in paper object
+                paper.category_cosine_scores = {
+                    category: score.item() for category, score in zip(categories, cosine_scores[0])
+                }
+                paper.category = max(paper.category_cosine_scores, key=paper.category_cosine_scores.get)
+                
+                logger.info(f"Paper {i} scores: {paper.category_cosine_scores}")
+                
+        except Exception as e:
+            logger.error(f"Error during cosine score calculation: {e}")
+            raise
