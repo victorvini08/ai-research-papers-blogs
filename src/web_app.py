@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from datetime import datetime, timedelta
 import os
+import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -78,7 +79,7 @@ def paper_detail(arxiv_id):
         'abstract': row[3],
         'categories': eval(row[4]) if row[4] else [],
         'published_date': row[5],
-        'summary': db._parse_summary_field(row[6]),
+        'summary': json.loads(row[6]),
         'category': row[7],
         'novelty_score': row[8],
         'source': row[9]

@@ -261,39 +261,33 @@ class PaperQualityFilter:
         return False
 
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
-        """Calculate cosine similarity between paper text and categories"""
-        # Lazy import to avoid CUDA issues in production
-        try:
-            import spacy
-            import numpy as np
-            from sklearn.metrics.pairwise import cosine_similarity
-            
-            logger.info("Successfully imported spaCy for embeddings")
-        except ImportError as e:
-            logger.error(f"Failed to import spaCy: {e}")
-            logger.error("This feature requires spaCy to be installed")
-            return
-        except Exception as e:
-            logger.error(f"Error setting up spaCy: {e}")
-            return
+        """Calculate cosine similarity between paper text and categories using TF-IDF (no external APIs)"""
+        import numpy as np
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
         
         try:
-            # Load spaCy model
-            logger.info("Loading spaCy model for embeddings...")
-            nlp = spacy.load("en_core_web_sm")
-            logger.info("spaCy model loaded successfully")
-
-            def get_embeddings(texts):
-                """Get embeddings for a list of texts using spaCy"""
-                embeddings = []
-                for text in texts:
-                    doc = nlp(text)
-                    # Use the document vector (average of token vectors)
-                    embedding = doc.vector
-                    embeddings.append(embedding)
-                return np.array(embeddings)
-
-            # Generate embeddings for categories
+            logger.info("Using TF-IDF for cosine similarity (no external APIs needed)")
+            
+            def get_tfidf_embeddings(texts):
+                """Get TF-IDF embeddings"""
+                # Initialize TF-IDF vectorizer
+                vectorizer = TfidfVectorizer(
+                    max_features=1000,
+                    stop_words='english',
+                    ngram_range=(1, 2),
+                    min_df=1,
+                    max_df=0.95,
+                    lowercase=True
+                )
+                
+                # Fit and transform texts
+                tfidf_matrix = vectorizer.fit_transform(texts)
+                logger.info(f"TF-IDF matrix shape: {tfidf_matrix.shape}")
+                
+                return tfidf_matrix
+            
+            # Prepare category texts
             category_texts = []
             category_names = list(categories.keys())
 
@@ -301,33 +295,54 @@ class PaperQualityFilter:
                 category_text = f"{category} {' '.join(keywords)}"
                 category_texts.append(category_text)
 
-            logger.info(f"Generating embeddings for {len(category_texts)} categories...")
-            category_embeddings = get_embeddings(category_texts)
-            logger.info("Category embeddings generated successfully")
-
-            for i in range(len(unique_papers)):
-                paper = unique_papers[i]
+            # Combine all texts for vectorization
+            all_texts = category_texts + [f"{paper.title} {paper.abstract}" for paper in unique_papers if not paper.category_cosine_scores]
+            
+            if not all_texts:
+                logger.info("No papers need category scores")
+                return
+            
+            logger.info(f"Processing {len(all_texts)} texts with TF-IDF...")
+            
+            # Get TF-IDF embeddings for all texts
+            tfidf_matrix = get_tfidf_embeddings(all_texts)
+            
+            # Extract category vectors (first len(categories) rows)
+            category_vectors = tfidf_matrix[:len(categories)]
+            
+            # Extract paper vectors (remaining rows)
+            paper_vectors = tfidf_matrix[len(categories):]
+            
+            # Calculate similarities for each paper
+            paper_idx = 0
+            for i, paper in enumerate(unique_papers):
                 if paper.category_cosine_scores:
                     continue
                 
-                logger.info(f"Calculating cosine score of paper {i} of total {len(unique_papers)} papers")
-                # Combine title and abstract for paper text
-                paper_text = f"{paper.title} {paper.abstract}"
-
-                # Generate embedding for paper text
-                paper_embedding = get_embeddings([paper_text])
-
-                # Calculate cosine similarity between paper and categories
-                similarities = cosine_similarity(paper_embedding, category_embeddings).flatten()
-
-                # Store cosine scores in paper object
-                paper.category_cosine_scores = {
-                    category: float(score) for category, score in zip(categories, similarities)
-                }
-                paper.category = max(paper.category_cosine_scores, key=paper.category_cosine_scores.get)
+                if paper_idx >= len(paper_vectors):
+                    break
                 
-                logger.info(f"Paper {i} scores: {paper.category_cosine_scores}")
+                logger.info(f"Calculating similarity for paper {i + 1} of {len(unique_papers)}")
+                
+                # Get paper vector
+                paper_vector = paper_vectors[paper_idx:paper_idx+1]
+                
+                # Calculate cosine similarity with all categories
+                similarities = cosine_similarity(paper_vector, category_vectors).flatten()
+                
+                # Store scores
+                paper.category_cosine_scores = {
+                    category: float(score) for category, score in zip(category_names, similarities)
+                }
+                
+                # Set the category to the one with highest similarity
+                best_category_idx = np.argmax(similarities)
+                paper.category = category_names[best_category_idx]
+                
+                logger.info(f"Paper {i + 1} scores: {paper.category_cosine_scores}")
+                
+                paper_idx += 1
                 
         except Exception as e:
-            logger.error(f"Error during cosine score calculation: {e}")
+            logger.error(f"Error during Groq API embedding calculation: {e}")
             raise
