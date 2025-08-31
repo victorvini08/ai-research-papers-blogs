@@ -1,8 +1,9 @@
 torch --index-url https://download.pytorch.org/whl/cpu
 torchvision --index-url https://download.pytorch.org/whl/cpu
 torchaudio --index-url https://download.pytorch.org/whl/cpu
-sentence-transformers==2.2.2
-huggingface-hub==0.16.4
+transformers==4.21.3
+tokenizers==0.12.1
+huggingface-hub==0.10.1
 flask==2.3.3
 requests==2.31.0
 arxiv==2.1.0

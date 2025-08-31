@@ -262,7 +262,7 @@ class PaperQualityFilter:
 
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
         """Calculate cosine similarity between paper text and categories"""
-        # Force CPU-only environment before importing sentence_transformers
+        # Force CPU-only environment before importing transformers
         import os
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
         os.environ['TORCH_CUDA_AVAILABLE'] = 'false'
@@ -270,24 +270,45 @@ class PaperQualityFilter:
         # Lazy import to avoid CUDA issues in production
         try:
             import torch
+            import torch.nn.functional as F
+            from transformers import AutoTokenizer, AutoModel
+            
             # Force PyTorch to use CPU
             torch.set_default_tensor_type('torch.FloatTensor')
-            
-            from sentence_transformers import SentenceTransformer, util
-            logger.info("Successfully imported sentence_transformers")
+            logger.info("Successfully imported transformers and PyTorch")
         except ImportError as e:
-            logger.error(f"Failed to import sentence_transformers: {e}")
-            logger.error("This feature requires sentence_transformers to be installed")
+            logger.error(f"Failed to import transformers: {e}")
+            logger.error("This feature requires transformers to be installed")
             return
         except Exception as e:
-            logger.error(f"Error setting up sentence_transformers: {e}")
+            logger.error(f"Error setting up transformers: {e}")
             return
         
         try:
-            # Initialize the sentence transformer model with explicit CPU device
-            logger.info("Initializing SentenceTransformer model...")
-            model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
-            logger.info("SentenceTransformer model initialized successfully")
+            # Initialize the model and tokenizer
+            logger.info("Loading BERT model for embeddings...")
+            model_name = "sentence-transformers/all-MiniLM-L6-v2"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModel.from_pretrained(model_name)
+            model.eval()
+            logger.info("BERT model loaded successfully")
+
+            def get_embeddings(texts):
+                """Get embeddings for a list of texts"""
+                # Tokenize texts
+                encoded_input = tokenizer(texts, padding=True, truncation=True, max_length=512, return_tensors='pt')
+                
+                # Get embeddings
+                with torch.no_grad():
+                    model_output = model(**encoded_input)
+                    # Use mean pooling
+                    attention_mask = encoded_input['attention_mask']
+                    embeddings = model_output.last_hidden_state
+                    mask = attention_mask.unsqueeze(-1).expand(embeddings.size()).float()
+                    embeddings = torch.sum(embeddings * mask, 1) / torch.clamp(mask.sum(1), min=1e-9)
+                    # Normalize embeddings
+                    embeddings = F.normalize(embeddings, p=2, dim=1)
+                    return embeddings
 
             # Generate embeddings for categories
             category_texts = []
@@ -298,7 +319,7 @@ class PaperQualityFilter:
                 category_texts.append(category_text)
 
             logger.info(f"Generating embeddings for {len(category_texts)} categories...")
-            category_embeddings = model.encode(category_texts, convert_to_tensor=True)
+            category_embeddings = get_embeddings(category_texts)
             logger.info("Category embeddings generated successfully")
 
             for i in range(len(unique_papers)):
@@ -311,10 +332,10 @@ class PaperQualityFilter:
                 paper_text = f"{paper.title} {paper.abstract}"
 
                 # Generate embedding for paper text
-                paper_embedding = model.encode(paper_text, convert_to_tensor=True)
+                paper_embedding = get_embeddings([paper_text])
 
                 # Calculate cosine similarity between paper and categories
-                cosine_scores = util.cos_sim(paper_embedding, category_embeddings)
+                cosine_scores = torch.mm(paper_embedding, category_embeddings.t())
 
                 # Store cosine scores in paper object
                 paper.category_cosine_scores = {
