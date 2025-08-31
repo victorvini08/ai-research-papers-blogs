@@ -40,7 +40,7 @@ def main():
         
         if papers_needing_backfill:
             logger.info("🔄 Running backfill...")
-            BackfillData().backfill_category_cosine_scores()
+            BackfillData().backfill_category_cosine_scores(papers_needing_backfill)
             logger.info("✅ Backfill completed successfully!")
         else:
             logger.info("✅ All papers already have category cosine scores!")

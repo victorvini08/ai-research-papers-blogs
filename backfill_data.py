@@ -27,8 +27,7 @@ class BackfillData:
             ]
         }
 
-    def backfill_category_cosine_scores(self):
-        papers = self.database.get_all_papers()
+    def backfill_category_cosine_scores(self, papers: list[Paper] = None):
         self.paper_quality_filter.calculate_cosine_score(papers, self.category_queries)
         for i in range(len(papers)):
             paper = papers[i]

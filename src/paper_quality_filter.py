@@ -262,53 +262,36 @@ class PaperQualityFilter:
 
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
         """Calculate cosine similarity between paper text and categories"""
-        # Force CPU-only environment before importing transformers
-        import os
-        os.environ['CUDA_VISIBLE_DEVICES'] = ''
-        os.environ['TORCH_CUDA_AVAILABLE'] = 'false'
-        
         # Lazy import to avoid CUDA issues in production
         try:
-            import torch
-            import torch.nn.functional as F
-            from transformers import AutoTokenizer, AutoModel
+            import spacy
+            import numpy as np
+            from sklearn.metrics.pairwise import cosine_similarity
             
-            # Force PyTorch to use CPU
-            torch.set_default_tensor_type('torch.FloatTensor')
-            logger.info("Successfully imported transformers and PyTorch")
+            logger.info("Successfully imported spaCy for embeddings")
         except ImportError as e:
-            logger.error(f"Failed to import transformers: {e}")
-            logger.error("This feature requires transformers to be installed")
+            logger.error(f"Failed to import spaCy: {e}")
+            logger.error("This feature requires spaCy to be installed")
             return
         except Exception as e:
-            logger.error(f"Error setting up transformers: {e}")
+            logger.error(f"Error setting up spaCy: {e}")
             return
         
         try:
-            # Initialize the model and tokenizer
-            logger.info("Loading BERT model for embeddings...")
-            model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = AutoModel.from_pretrained(model_name)
-            model.eval()
-            logger.info("BERT model loaded successfully")
+            # Load spaCy model
+            logger.info("Loading spaCy model for embeddings...")
+            nlp = spacy.load("en_core_web_sm")
+            logger.info("spaCy model loaded successfully")
 
             def get_embeddings(texts):
-                """Get embeddings for a list of texts"""
-                # Tokenize texts
-                encoded_input = tokenizer(texts, padding=True, truncation=True, max_length=512, return_tensors='pt')
-                
-                # Get embeddings
-                with torch.no_grad():
-                    model_output = model(**encoded_input)
-                    # Use mean pooling
-                    attention_mask = encoded_input['attention_mask']
-                    embeddings = model_output.last_hidden_state
-                    mask = attention_mask.unsqueeze(-1).expand(embeddings.size()).float()
-                    embeddings = torch.sum(embeddings * mask, 1) / torch.clamp(mask.sum(1), min=1e-9)
-                    # Normalize embeddings
-                    embeddings = F.normalize(embeddings, p=2, dim=1)
-                    return embeddings
+                """Get embeddings for a list of texts using spaCy"""
+                embeddings = []
+                for text in texts:
+                    doc = nlp(text)
+                    # Use the document vector (average of token vectors)
+                    embedding = doc.vector
+                    embeddings.append(embedding)
+                return np.array(embeddings)
 
             # Generate embeddings for categories
             category_texts = []
@@ -335,11 +318,11 @@ class PaperQualityFilter:
                 paper_embedding = get_embeddings([paper_text])
 
                 # Calculate cosine similarity between paper and categories
-                cosine_scores = torch.mm(paper_embedding, category_embeddings.t())
+                similarities = cosine_similarity(paper_embedding, category_embeddings).flatten()
 
                 # Store cosine scores in paper object
                 paper.category_cosine_scores = {
-                    category: score.item() for category, score in zip(categories, cosine_scores[0])
+                    category: float(score) for category, score in zip(categories, similarities)
                 }
                 paper.category = max(paper.category_cosine_scores, key=paper.category_cosine_scores.get)
                 
