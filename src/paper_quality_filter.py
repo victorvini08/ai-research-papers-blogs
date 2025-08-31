@@ -4,7 +4,9 @@ import time
 from typing import List, Dict
 from .paper import Paper
 import logging
-from sentence_transformers import SentenceTransformer, util
+
+# Delay sentence_transformers import to avoid CUDA issues in production
+# Only import when actually needed
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +262,14 @@ class PaperQualityFilter:
 
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
         """Calculate cosine similarity between paper text and categories"""
+        # Lazy import to avoid CUDA issues in production
+        try:
+            from sentence_transformers import SentenceTransformer, util
+        except ImportError as e:
+            logger.error(f"Failed to import sentence_transformers: {e}")
+            logger.error("This feature requires sentence_transformers to be installed")
+            return
+        
         # Initialize the sentence transformer model
         model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 
