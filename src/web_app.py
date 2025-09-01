@@ -28,16 +28,7 @@ def index():
     """Home page showing the latest blog and recent papers"""
     # Get all blogs ordered by recency
     blogs = db.get_all_blogs()
-    
-    # For the latest blog, generate a summary for the home page
-    if blogs:
-        latest_blog = blogs[0]
-        paper_ids = latest_blog.get('paper_ids', [])
-        if paper_ids:
-            # Get papers for the latest blog
-            latest_papers = db.get_papers_by_arxiv_ids(paper_ids)
-            latest_blog['summary_content'] = generate_blog_summary(latest_papers)
-    
+     
     # Get the 10 most recent papers
     recent_papers = db.get_recent_papers(days=30)  # Get papers from last 30 days
     papers = recent_papers[:10]  # Limit to 10 most recent
@@ -46,21 +37,6 @@ def index():
                          blogs=blogs,
                          papers=papers)
 
-@app.route('/daily-summary')
-def daily_summary():
-    """Show daily summary of papers"""
-    today = datetime.now().strftime('%Y-%m-%d')
-    papers = db.get_papers_by_date(today)
-    
-    if not papers:
-        return render_template('daily_summary.html', 
-                             papers=[], 
-                             date=today,
-                             message="No papers found for today.")
-    
-    return render_template('daily_summary.html', 
-                         papers=papers, 
-                         date=today)
 
 @app.route('/paper/<arxiv_id>')
 def paper_detail(arxiv_id):
