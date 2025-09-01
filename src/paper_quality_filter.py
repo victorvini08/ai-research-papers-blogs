@@ -296,8 +296,6 @@ class PaperQualityFilter:
                 # Prepare paper texts for this batch
                 paper_texts = []
                 for paper in batch_papers:
-                    # if paper.category_cosine_scores:
-                    #     continue
                     paper_text = f"{paper.title} {paper.abstract}"
                     paper_texts.append(paper_text)
                 
@@ -310,8 +308,8 @@ class PaperQualityFilter:
                 
                 # Calculate similarities for this batch
                 for i, paper in enumerate(batch_papers):
-                    # if paper.category_cosine_scores:
-                    #     continue        
+                    if paper.category_cosine_scores:
+                        continue        
                     logger.info(f"Calculating similarity for paper {batch_start + i + 1} of {len(unique_papers)}")
                     
                     # Get paper embedding

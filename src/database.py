@@ -116,6 +116,43 @@ class PaperDatabase:
             except sqlite3.OperationalError:
                 pass  # Column might already exist
         
+        # Make content column nullable to avoid NOT NULL constraint issues
+        if 'content' in blog_columns:
+            try:
+                # SQLite doesn't support ALTER COLUMN to change NOT NULL, so we need to recreate the table
+                # First, get the current data
+                cursor.execute("SELECT id, title, summary, paper_count, categories, published_date, created_at, paper_ids FROM blogs")
+                existing_blogs = cursor.fetchall()
+                
+                # Drop the old table
+                cursor.execute("DROP TABLE blogs")
+                
+                # Recreate the table without NOT NULL constraint on content
+                cursor.execute('''
+                    CREATE TABLE blogs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        summary TEXT NOT NULL,
+                        paper_count INTEGER NOT NULL,
+                        categories TEXT,
+                        published_date TEXT NOT NULL,
+                        paper_ids TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Reinsert the data
+                for blog in existing_blogs:
+                    cursor.execute('''
+                        INSERT INTO blogs (id, title, summary, paper_count, categories, published_date, created_at, paper_ids)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', blog)
+                
+                print("Successfully migrated blogs table to remove content column NOT NULL constraint")
+            except Exception as e:
+                print(f"Error migrating blogs table: {e}")
+                # If migration fails, just continue with the old structure
+        
         # Processing log table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS processing_log (

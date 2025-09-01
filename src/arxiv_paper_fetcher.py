@@ -158,10 +158,15 @@ class PaperFetcher:
     
     def fetch_papers_by_category(self, keywords: list, max_results: int = 3) -> List[Paper]:
         """
-        Fetch papers from arXiv matching any of the provided keywords in title or abstract.
+        Fetch papers from arXiv matching any of the provided keywords in title or abstract,
+        distributed equally across the last week's dates.
         """
-        papers = []
+        # Calculate date range for last week
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
         
+        print(f"Fetching papers from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
         ai_categories = [
             'cs.AI', 'cs.LG', 'cs.CL', 'cs.CV', 'cs.NE', 'cs.RO', 'cs.SE',
@@ -176,30 +181,54 @@ class PaperFetcher:
         
         search = arxiv.Search(
             query=search_query,
-            max_results=max_results,
+            max_results=max_results*5,
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending
         )
         
+        # Group papers by date
+        papers_by_date = {}
+        
         try:
             for result in self.client.results(search):
+                paper_date = result.published.date()
                 
-                paper = Paper( 
-                    arxiv_id=result.entry_id.split('/')[-1],
-                    title=result.title,
-                    authors=[author.name for author in result.authors],
-                    abstract=result.summary,
-                    categories=result.categories,
-                    published_data=result.published.strftime('%Y-%m-%d'),
-                    pdf_url=result.pdf_url,
-                    entry_id=result.entry_id
-                )
-                papers.append(paper)
-                
-                if len(papers) >= max_results:
-                    break
+                # Only include papers from the last week
+                if start_date.date() <= paper_date <= end_date.date():
+                    date_str = paper_date.strftime('%Y-%m-%d')
+                    
+                    if date_str not in papers_by_date:
+                        papers_by_date[date_str] = []
+                    
+                    paper = Paper( 
+                        arxiv_id=result.entry_id.split('/')[-1],
+                        title=result.title,
+                        authors=[author.name for author in result.authors],
+                        abstract=result.summary,
+                        categories=result.categories,
+                        published_data=result.published.strftime('%Y-%m-%d'),
+                        pdf_url=result.pdf_url,
+                        entry_id=result.entry_id
+                    )
+                    papers_by_date[date_str].append(paper)
                     
         except Exception as e:
             print(f"Error fetching papers by category: {e}")
+        
+        # Distribute papers across days (approximately equal number per day)
+        papers_per_day = max(1, max_results // 7)  # Distribute across 7 days
+        papers = []
+        
+        for date_str, day_papers in sorted(papers_by_date.items(), reverse=True):
+            # Take approximately papers_per_day from each day
+            selected_papers = day_papers[:papers_per_day]
+            papers.extend(selected_papers)
             
-        return papers
+            print(f"Date {date_str}: {len(day_papers)} papers available, selected {len(selected_papers)}")
+            
+            # Stop if we have enough papers
+            if len(papers) >= max_results:
+                break
+        
+        print(f"Total papers fetched: {len(papers)} across {len(papers_by_date)} days")
+        return papers[:max_results]  # Ensure we don't exceed max_results
