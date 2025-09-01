@@ -29,6 +29,15 @@ def index():
     # Get all blogs ordered by recency
     blogs = db.get_all_blogs()
     
+    # For the latest blog, generate a summary for the home page
+    if blogs:
+        latest_blog = blogs[0]
+        paper_ids = latest_blog.get('paper_ids', [])
+        if paper_ids:
+            # Get papers for the latest blog
+            latest_papers = db.get_papers_by_arxiv_ids(paper_ids)
+            latest_blog['summary_content'] = generate_blog_summary(latest_papers)
+    
     # Get the 10 most recent papers
     recent_papers = db.get_recent_papers(days=30)  # Get papers from last 30 days
     papers = recent_papers[:10]  # Limit to 10 most recent
@@ -91,6 +100,15 @@ def paper_detail(arxiv_id):
 def blog_list():
     """View list of all blogs"""
     blogs = db.get_all_blogs()
+    
+    # For each blog, get a preview of the papers to show in the list
+    for blog in blogs:
+        paper_ids = blog.get('paper_ids', [])
+        if paper_ids:
+            # Get just the first few papers for preview
+            preview_papers = db.get_papers_by_arxiv_ids(paper_ids[:3])
+            blog['preview_papers'] = preview_papers
+    
     return render_template('blog_list.html', blogs=blogs)
 
 @app.route('/blog/<int:blog_id>')
@@ -99,6 +117,18 @@ def blog_detail(blog_id):
     blog = db.get_blog_by_id(blog_id)
     if not blog:
         return render_template('404.html', message="Blog post not found"), 404
+    
+    # Get the papers for this blog
+    paper_ids = blog.get('paper_ids', [])
+    papers = db.get_papers_by_arxiv_ids(paper_ids)
+    
+    # Generate blog content dynamically
+    blog_content = generate_blog_content(papers)
+    
+    # Add the generated content to the blog dict
+    blog['content'] = blog_content
+    
+    return render_template('blog_detail.html', blog=blog)
 
 @app.route('/paper-graph')
 def paper_graph():
@@ -217,13 +247,18 @@ def send_blog_email(subscriber_email: str, blog: Dict) -> bool:
             app.logger.error("SMTP credentials not configured")
             return False
         
+        # Generate blog content dynamically
+        paper_ids = blog.get('paper_ids', [])
+        papers = db.get_papers_by_arxiv_ids(paper_ids)
+        blog_content = generate_blog_content(papers)
+        
         # Create message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"AI Research Daily - {blog['title']}"
         msg['From'] = smtp_username
         msg['To'] = subscriber_email
         
-            # Create HTML content with full blog content
+        # Create HTML content with full blog content
         html_content = f"""
         <html>
         <body>
@@ -233,7 +268,7 @@ def send_blog_email(subscriber_email: str, blog: Dict) -> bool:
             <p><strong>Papers Covered:</strong> {blog['paper_count']}</p>
             <p>Read the full blog post here for a much better understanding! <a href="{request.host_url}blog/{blog['id']}">Click here</a></p>
             <hr>
-            <div>{blog['content']}</div>
+            <div>{blog_content}</div>
             <hr>
             <p>Unsubscribe: <a href="{request.host_url}unsubscribe?email={subscriber_email}">Click here</a></p>
         </body>

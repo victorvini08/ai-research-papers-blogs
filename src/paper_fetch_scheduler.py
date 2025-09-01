@@ -65,7 +65,10 @@ class PaperFetchScheduler:
         # calculate the cosine similarity of each paper (title + abstract) with each category
         # then store the list of dictionary for each paper with intent as key and cosine score as the value
         # inside paper.category_cosine_scores
-        self.paper_quality_filter.calculate_cosine_score(unique_papers, self.category_queries)
+        try: 
+            self.paper_quality_filter.calculate_cosine_score(unique_papers, self.category_queries)
+        except Exception as e:
+            logger.error(f"Error calculating cosine scores: {e}")
 
         filtered_papers = self.paper_quality_filter.filter_papers(unique_papers)
         logger.info(f"After quality filtering: {len(filtered_papers)} papers")
@@ -92,17 +95,19 @@ class PaperFetchScheduler:
         # Generate blog content if we have papers
         if saved_papers:
             try:
-                blog_content = generate_blog_content(saved_papers)
                 blog_title = f"Weekly AI Research Roundup - {datetime.now().strftime('%B %d, %Y')}"
                 blog_summary = f"Discover the latest {len(saved_papers)} AI research papers across {len(set(p.category for p in saved_papers))} categories."
+                
+                # Store paper IDs instead of pre-generated content
+                paper_ids = [paper.arxiv_id for paper in saved_papers]
 
                 blog_id = self.db.save_blog(
                     title=blog_title,
-                    content=blog_content,
                     summary=blog_summary,
                     paper_count=len(saved_papers),
                     categories=", ".join(set(p.category for p in saved_papers)),
-                    published_date=datetime.now().strftime('%Y-%m-%d')
+                    published_date=datetime.now().strftime('%Y-%m-%d'),
+                    paper_ids=paper_ids
                 )
 
                 logger.info(f"Generated and saved blog post with ID {blog_id} containing {len(saved_papers)} papers.")
@@ -239,7 +244,7 @@ class PaperFetchScheduler:
         try:
             self.scheduler.add_job(
                 func=self.fetch_and_persist_papers,
-                trigger=CronTrigger(day_of_week='sun', hour=5, minute=0, timezone='Asia/Kolkata'),
+                trigger=CronTrigger(day_of_week='mon', hour=15, minute=30, timezone='Asia/Kolkata'),
                 id='weekly_paper_fetch',
                 name='Weekly Research Papers Fetch',
                 replace_existing=True,

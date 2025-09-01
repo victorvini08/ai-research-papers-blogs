@@ -90,19 +90,31 @@ class PaperDatabase:
             )
         ''')
         
-        # Blogs table
+        # Blogs table - Updated to store paper IDs instead of pre-generated content
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS blogs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
-                content TEXT NOT NULL,
                 summary TEXT NOT NULL,
                 paper_count INTEGER NOT NULL,
                 categories TEXT,
                 published_date TEXT NOT NULL,
+                paper_ids TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Check if we need to migrate existing blogs table
+        cursor.execute("PRAGMA table_info(blogs)")
+        blog_columns = {row[1] for row in cursor.fetchall()}
+        
+        # If old blogs table exists without paper_ids, add the column
+        if 'paper_ids' not in blog_columns and 'content' in blog_columns:
+            try:
+                cursor.execute("ALTER TABLE blogs ADD COLUMN paper_ids TEXT DEFAULT '[]'")
+                print("Added paper_ids column to blogs table")
+            except sqlite3.OperationalError:
+                pass  # Column might already exist
         
         # Processing log table
         cursor.execute('''
@@ -473,16 +485,16 @@ class PaperDatabase:
             print(f"Error unsubscribing email: {e}")
             return False
     
-    def save_blog(self, title, content, summary, paper_count, categories, published_date):
+    def save_blog(self, title, summary, paper_count, categories, published_date, paper_ids: List[str]):
         """Save a new blog post"""
       
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO blogs (title, content, summary, paper_count, categories, published_date)
+            INSERT INTO blogs (title, summary, paper_count, categories, published_date, paper_ids)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (title, content, summary, paper_count, categories, published_date))
+        ''', (title, summary, paper_count, categories, published_date, json.dumps(paper_ids)))
         
         conn.commit()
         conn.close()
@@ -494,7 +506,7 @@ class PaperDatabase:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, title, summary, content, paper_count, categories, published_date, created_at
+            SELECT id, title, summary, paper_count, categories, published_date, created_at, paper_ids
             FROM blogs 
             ORDER BY created_at DESC
         ''')
@@ -505,11 +517,11 @@ class PaperDatabase:
                 'id': row[0],
                 'title': row[1],
                 'summary': row[2],
-                'content': row[3],
-                'paper_count': row[4],
-                'categories': row[5],
-                'published_date': row[6],
-                'created_at': row[7]
+                'paper_count': row[3],
+                'categories': row[4],
+                'published_date': row[5],
+                'created_at': row[6],
+                'paper_ids': json.loads(row[7]) if row[7] else []
             })
         
         conn.close()
@@ -521,7 +533,7 @@ class PaperDatabase:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, title, content, summary, paper_count, categories, published_date, created_at
+            SELECT id, title, summary, paper_count, categories, published_date, created_at, paper_ids
             FROM blogs 
             WHERE id = ?
         ''', (blog_id,))
@@ -533,15 +545,60 @@ class PaperDatabase:
             return {
                 'id': row[0],
                 'title': row[1],
-                'content': row[2],
-                'summary': row[3],
-                'paper_count': row[4],
-                'categories': row[5],
-                'published_date': row[6],
-                'created_at': row[7]
+                'summary': row[2],
+                'paper_count': row[3],
+                'categories': row[4],
+                'published_date': row[5],
+                'created_at': row[6],
+                'paper_ids': json.loads(row[7]) if row[7] else []
             }
         return None
     
+    def get_papers_by_arxiv_ids(self, arxiv_ids: List[str]) -> List[Paper]:
+        """Get papers by their arxiv IDs"""
+        if not arxiv_ids:
+            return []
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Create placeholders for the IN clause
+        placeholders = ','.join(['?' for _ in arxiv_ids])
+        
+        cursor.execute(f'''
+            SELECT arxiv_id, title, authors, abstract, categories, 
+                   published_date, summary, category, novelty_score, source, 
+                   quality_score, author_h_indices, author_institutions, category_cosine_scores
+            FROM papers 
+            WHERE arxiv_id IN ({placeholders})
+            ORDER BY published_date DESC
+        ''', arxiv_ids)
+        
+        papers = []
+        for row in cursor.fetchall():
+            paper = Paper(
+                arxiv_id=row[0],
+                title=row[1],
+                authors=json.loads(row[2]),
+                abstract=row[3],
+                categories=json.loads(row[4]),
+                published_data=row[5],
+                pdf_url=f"https://arxiv.org/pdf/{row[0]}",
+                entry_id=f"https://arxiv.org/abs/{row[0]}",
+                summary=_parse_summary_field(row[6]),
+                category=row[7],
+                novelty_score=row[8],
+                source=row[9],
+                quality_score=row[10],
+                author_h_indices=json.loads(row[11]) if row[11] else [],
+                author_institutions=json.loads(row[12]) if row[12] else [],
+                category_cosine_scores=json.loads(row[13]) if row[13] else {}
+            )
+            papers.append(paper)
+        
+        conn.close()
+        return papers
+
     def _get_connection(self):
         """Get database connection for internal use"""
         return sqlite3.connect(self.db_path)

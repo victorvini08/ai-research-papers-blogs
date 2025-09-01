@@ -94,6 +94,10 @@
                                     <i class="fas fa-file-pdf me-2"></i>
                                     Download PDF
                                 </a>
+                                <a href="{{ url_for('paper_graph') }}" class="btn btn-primary">
+                                    <i class="fas fa-project-diagram me-2"></i>
+                                    View Graph
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -141,26 +145,26 @@
                             </div>
                             {% endif %}
                             
-                            {% if paper.summary.key_innovation or paper.summary.innovation %}
+                            {% if paper.summary['key innovation'] or paper.summary.key_innovation or paper.summary.innovation %}
                             <div class="summary-section mb-4">
                                 <h5 class="text-dark mb-3">
                                     <i class="fas fa-lightbulb me-2 text-success"></i>
                                     Key Innovation
                                 </h5>
                                 <div class="summary-content p-3 bg-light rounded">
-                                    {{ (paper.summary.key_innovation or paper.summary.innovation) | safe }}
+                                    {{ (paper.summary['key innovation'] if 'key innovation' in paper.summary else (paper.summary.key_innovation if paper.summary.key_innovation else paper.summary.innovation)) | safe }}
                                 </div>
                             </div>
                             {% endif %}
                             
-                            {% if paper.summary.practical_impact or paper.summary.impact %}
+                            {% if paper.summary['practical impact'] or paper.summary.practical_impact or paper.summary.impact %}
                             <div class="summary-section mb-4">
                                 <h5 class="text-dark mb-3">
                                     <i class="fas fa-globe me-2 text-info"></i>
                                     Practical Impact
                                 </h5>
                                 <div class="summary-content p-3 bg-light rounded">
-                                    {{ (paper.summary.practical_impact or paper.summary.impact) | safe }}
+                                    {{ (paper.summary['practical impact'] if 'practical impact' in paper.summary else (paper.summary.practical_impact if paper.summary.practical_impact else paper.summary.impact)) | safe }}
                                 </div>
                             </div>
                             {% endif %}

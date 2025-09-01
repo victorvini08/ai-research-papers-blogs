@@ -261,32 +261,18 @@ class PaperQualityFilter:
         return False
 
     def calculate_cosine_score(self, unique_papers: List[Paper], categories:Dict[str, List[str]]):
-        """Calculate cosine similarity between paper text and categories using TF-IDF (no external APIs)"""
-        import numpy as np
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.metrics.pairwise import cosine_similarity
-        
+        """Calculate cosine similarity between paper text and categories using sentence transformers"""
         try:
-            logger.info("Using TF-IDF for cosine similarity (no external APIs needed)")
+            # Lazy import to avoid CUDA issues in production
+            try:
+                from sentence_transformers import SentenceTransformer
+                logger.info("Using sentence-transformers for embeddings")
+            except ImportError as e:
+                logger.error(f"Failed to import sentence_transformers: {e}")
+                raise
             
-            def get_tfidf_embeddings(texts):
-                """Get TF-IDF embeddings with memory optimization"""
-                # Initialize TF-IDF vectorizer with memory-efficient settings
-                vectorizer = TfidfVectorizer(
-                    max_features=500,  # Reduced from 1000
-                    stop_words='english',
-                    ngram_range=(1, 1),  # Reduced from (1, 2) to save memory
-                    min_df=1,
-                    max_df=0.9,  # Slightly reduced
-                    lowercase=True,
-                    dtype=np.float32  # Use float32 instead of float64 to save memory
-                )
-                
-                # Fit and transform texts
-                tfidf_matrix = vectorizer.fit_transform(texts)
-                logger.info(f"TF-IDF matrix shape: {tfidf_matrix.shape}")
-                
-                return tfidf_matrix
+            # Initialize the model
+            model = SentenceTransformer('all-MiniLM-L6-v2')
             
             # Prepare category texts
             category_texts = []
@@ -296,45 +282,44 @@ class PaperQualityFilter:
                 category_text = f"{category} {' '.join(keywords)}"
                 category_texts.append(category_text)
 
-            # Process papers in small batches to avoid memory issues
-            batch_size = 5  # Small batch size for memory efficiency
-            papers_needing_scores = [p for p in unique_papers if not p.category_cosine_scores]
-            
-            if not papers_needing_scores:
-                logger.info("No papers need category scores")
-                return
-            
-            logger.info(f"Processing {len(papers_needing_scores)} papers in batches of {batch_size}...")
-            
-            # First, get category embeddings
+            # Get embeddings for categories
             logger.info(f"Getting embeddings for {len(category_texts)} categories...")
-            category_tfidf = get_tfidf_embeddings(category_texts)
-            
-            # Process papers in batches
-            for batch_start in range(0, len(papers_needing_scores), batch_size):
-                batch_end = min(batch_start + batch_size, len(papers_needing_scores))
-                batch_papers = papers_needing_scores[batch_start:batch_end]
+            category_embeddings = model.encode(category_texts)
+            logger.info(f"Category embeddings shape: {category_embeddings.shape}")
+
+            # Process papers in batches to avoid memory issues
+            batch_size = 10
+            for batch_start in range(0, len(unique_papers), batch_size):
+                batch_end = min(batch_start + batch_size, len(unique_papers))
+                batch_papers = unique_papers[batch_start:batch_end]
                 
                 # Prepare paper texts for this batch
                 paper_texts = []
                 for paper in batch_papers:
+                    # if paper.category_cosine_scores:
+                    #     continue
                     paper_text = f"{paper.title} {paper.abstract}"
                     paper_texts.append(paper_text)
                 
-                logger.info(f"Processing batch {batch_start//batch_size + 1} ({batch_start+1}-{batch_end} of {len(papers_needing_scores)})")
+                if not paper_texts:
+                    continue
                 
-                # Get TF-IDF embeddings for this batch of papers
-                paper_tfidf = get_tfidf_embeddings(paper_texts)
+                # Get embeddings for this batch of papers
+                logger.info(f"Getting embeddings for papers {batch_start+1}-{batch_end}...")
+                paper_embeddings = model.encode(paper_texts)
                 
-                # Calculate similarities for each paper in this batch
+                # Calculate similarities for this batch
                 for i, paper in enumerate(batch_papers):
-                    logger.info(f"Calculating similarity for paper {batch_start + i + 1} of {len(papers_needing_scores)}")
+                    # if paper.category_cosine_scores:
+                    #     continue        
+                    logger.info(f"Calculating similarity for paper {batch_start + i + 1} of {len(unique_papers)}")
                     
-                    # Get paper vector
-                    paper_vector = paper_tfidf[i:i+1]
+                    # Get paper embedding
+                    paper_embedding = paper_embeddings[i].reshape(1, -1)
                     
                     # Calculate cosine similarity with all categories
-                    similarities = cosine_similarity(paper_vector, category_tfidf).flatten()
+                    from sklearn.metrics.pairwise import cosine_similarity
+                    similarities = cosine_similarity(paper_embedding, category_embeddings).flatten()
                     
                     # Store scores
                     paper.category_cosine_scores = {
@@ -342,16 +327,16 @@ class PaperQualityFilter:
                     }
                     
                     # Set the category to the one with highest similarity
+                    import numpy as np
                     best_category_idx = np.argmax(similarities)
                     paper.category = category_names[best_category_idx]
                     
                     logger.info(f"Paper {batch_start + i + 1} scores: {paper.category_cosine_scores}")
                 
-                # Clear memory after each batch
-                del paper_tfidf
-                import gc
-                gc.collect()
+                # Small delay between batches
+                import time
+                time.sleep(0.5)
                 
         except Exception as e:
-            logger.error(f"Error during Groq API embedding calculation: {e}")
+            logger.error(f"Error during sentence transformer embedding calculation: {e}")
             raise

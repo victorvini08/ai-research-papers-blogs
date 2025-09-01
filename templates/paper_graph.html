@@ -87,6 +87,38 @@
             border-radius: 10px;
             background: radial-gradient(circle at center, #1a1a3a 0%, #0f0f23 100%);
             overflow: hidden;
+            position: relative;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            border-color: #00d4ff;
         }
 
         .tooltip {
@@ -261,7 +293,13 @@
             </div>
         </div>
 
-        <div id="visualization"></div>
+        <div id="visualization">
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoomIn">+</button>
+                <button class="zoom-btn" id="zoomOut">−</button>
+                <button class="zoom-btn" id="resetZoom">⌂</button>
+            </div>
+        </div>
 
         <div class="legend">
             <div class="legend-item">
@@ -289,7 +327,7 @@
         <div class="stats">
             <span id="paperCount">Papers: 0</span>
             <span id="categoryCount">Categories: 5</span>
-            <span>Drag nodes to explore • Hover for details • Click papers to view details</span>
+            <span>Drag nodes to explore • Hover for details • Click papers to view details • Scroll to zoom</span>
         </div>
     </div>
 
@@ -306,7 +344,7 @@
         // Visualization setup
         const width = 1200;
         const height = 700;
-        const centerStrength = 0.1;
+        const centerStrength = 0.15;
         let forceStrength = 200;
         let linkDistance = 100;
 
@@ -320,13 +358,29 @@
             console.log('Sample paper:', papersData[0]);
         }
 
-        // Create SVG
+        // Create SVG with zoom functionality
         const svg = d3.select('#visualization')
             .append('svg')
             .attr('width', '100%')
             .attr('height', '100%')
             .attr('viewBox', `0 0 ${width} ${height}`)
             .style('background', 'transparent');
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.3, 3])
+            .on('zoom', handleZoom);
+
+        // Apply zoom to SVG
+        svg.call(zoom);
+
+        // Create container group for all elements
+        const container = svg.append('g');
+
+        // Zoom event handler
+        function handleZoom(event) {
+            container.attr('transform', event.transform);
+        }
 
         // Create tooltip
         const tooltip = d3.select('body')
@@ -342,7 +396,7 @@
             const nodes = [];
             const links = [];
 
-            // Add category nodes (larger, central)
+            // Add category nodes (larger, central) - positioned closer to center
             categories.forEach((cat, i) => {
                 nodes.push({
                     id: cat.id,
@@ -350,8 +404,8 @@
                     type: 'category',
                     color: cat.color,
                     size: 20,
-                    fx: width/2 + Math.cos(i * 2 * Math.PI / categories.length) * 200,
-                    fy: height/2 + Math.sin(i * 2 * Math.PI / categories.length) * 200
+                    fx: width/2 + Math.cos(i * 2 * Math.PI / categories.length) * 150,
+                    fy: height/2 + Math.sin(i * 2 * Math.PI / categories.length) * 150
                 });
             });
 
@@ -400,7 +454,7 @@
                             source: paper.arxiv_id,
                             target: catId,
                             strength: score,
-                            distance: (1 - score) * linkDistance * 2
+                            distance: (1 - score) * linkDistance * 1.5
                         });
                     }
                 });
@@ -416,9 +470,9 @@
             document.getElementById('paperCount').textContent = `Papers: ${papers.length}`;
 
             // Clear previous visualization
-            svg.selectAll('*').remove();
+            container.selectAll('*').remove();
 
-            // Create force simulation
+            // Create force simulation with boundary constraints
             const simulation = d3.forceSimulation(data.nodes)
                 .force('link', d3.forceLink(data.links)
                     .id(d => d.id)
@@ -430,11 +484,21 @@
                 )
                 .force('center', d3.forceCenter(width / 2, height / 2).strength(centerStrength))
                 .force('collision', d3.forceCollide()
-                    .radius(d => d.size + 2)
-                );
+                    .radius(d => d.size + 3)
+                )
+                // Add boundary force to keep nodes within view
+                .force('boundary', () => {
+                    data.nodes.forEach(node => {
+                        if (node.type !== 'category') {
+                            const margin = 50;
+                            node.x = Math.max(margin, Math.min(width - margin, node.x));
+                            node.y = Math.max(margin, Math.min(height - margin, node.y));
+                        }
+                    });
+                });
 
             // Create links
-            const link = svg.append('g')
+            const link = container.append('g')
                 .selectAll('line')
                 .data(data.links)
                 .enter().append('line')
@@ -446,7 +510,7 @@
                 .attr('stroke-width', d => Math.max(0.5, d.strength * 2));
 
             // Create nodes
-            const node = svg.append('g')
+            const node = container.append('g')
                 .selectAll('circle')
                 .data(data.nodes)
                 .enter().append('circle')
@@ -463,7 +527,7 @@
                 );
 
             // Add labels for categories
-            const labels = svg.append('g')
+            const labels = container.append('g')
                 .selectAll('text')
                 .data(data.nodes.filter(d => d.type === 'category'))
                 .enter().append('text')
@@ -529,8 +593,17 @@
                 }
             });
 
-            // Update positions on tick
+            // Update positions on tick with boundary constraints
             simulation.on('tick', () => {
+                // Apply boundary constraints to paper nodes
+                data.nodes.forEach(node => {
+                    if (node.type === 'paper') {
+                        const margin = 30;
+                        node.x = Math.max(margin, Math.min(width - margin, node.x || 0));
+                        node.y = Math.max(margin, Math.min(height - margin, node.y || 0));
+                    }
+                });
+
                 link
                     .attr('x1', d => d.source.x)
                     .attr('y1', d => d.source.y)
@@ -596,8 +669,8 @@
                 data.nodes.forEach((node, i) => {
                     if (node.type === 'category') {
                         const catIndex = categories.findIndex(c => c.id === node.id);
-                        node.fx = width/2 + Math.cos(catIndex * 2 * Math.PI / categories.length) * 200;
-                        node.fy = height/2 + Math.sin(catIndex * 2 * Math.PI / categories.length) * 200;
+                        node.fx = width/2 + Math.cos(catIndex * 2 * Math.PI / categories.length) * 150;
+                        node.fy = height/2 + Math.sin(catIndex * 2 * Math.PI / categories.length) * 150;
                     } else {
                         node.fx = null;
                         node.fy = null;
@@ -605,6 +678,31 @@
                 });
                 simulation.alpha(0.5).restart();
                 document.getElementById('pauseBtn').textContent = 'Pause';
+            });
+
+            // Zoom control handlers
+            document.getElementById('zoomIn').addEventListener('click', function() {
+                svg.transition().duration(300).call(
+                    zoom.scaleBy, 1.5
+                );
+            });
+
+            document.getElementById('zoomOut').addEventListener('click', function() {
+                svg.transition().duration(300).call(
+                    zoom.scaleBy, 1 / 1.5
+                );
+            });
+
+            document.getElementById('resetZoom').addEventListener('click', function() {
+                svg.transition().duration(500).call(
+                    zoom.transform,
+                    d3.zoomIdentity
+                );
+            });
+
+            // Enable scroll wheel zoom
+            svg.on('wheel', function(event) {
+                event.preventDefault();
             });
 
             return simulation;

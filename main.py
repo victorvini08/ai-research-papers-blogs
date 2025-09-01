@@ -1,7 +1,6 @@
 import os
 import logging
 from src.web_app import app
-from backfill_data import BackfillData
 
 # Configure logging to show INFO level messages
 logging.basicConfig(
