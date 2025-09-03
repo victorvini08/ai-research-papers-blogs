@@ -39,7 +39,7 @@ class PaperFetchScheduler:
 
     def fetch_and_persist_papers(self):
         logger.info("Starting scheduler for category-based fetching from arXiv")
-        max_per_category = 20
+        max_per_category = 30
         all_papers = []
         for category, keywords in self.category_queries.items():
             logger.info(f"Fetching papers for category: {category}")
