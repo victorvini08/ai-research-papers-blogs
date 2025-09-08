@@ -1,5 +1,6 @@
 import requests
 import os
+import math
 import time
 from typing import List, Dict
 from .paper import Paper
@@ -87,6 +88,7 @@ class PaperQualityFilter:
 
                 # Calculate quality score
                 quality_score = self.calculate_quality_score(paper, author_info)
+                logger.info(f"Quality score for paper {i} of {len(papers)}: {quality_score}")
                 paper.quality_score = quality_score
 
                 # Add author metadata to paper
@@ -103,7 +105,7 @@ class PaperQualityFilter:
         papers.sort(key=lambda x: x.quality_score, reverse=True)
 
         # Filter out papers with very low quality scores
-        filtered_papers = [p for p in papers if p.quality_score > 0.15]
+        filtered_papers = [p for p in papers if p.quality_score > 0.1]
         
         logger.info(f"Filtered to {len(filtered_papers)} high-quality papers")
         return filtered_papers
@@ -218,9 +220,15 @@ class PaperQualityFilter:
         # Factor 1: Author h-index (40% weight)
         h_indices = author_info.get('h_indices', [])
         if h_indices:
-            avg_h_index = sum(h_indices) / len(h_indices)
-            # Normalize h-index (0-100 scale)
-            h_score = min(avg_h_index / 50.0, 1.0)
+            # Use weighted average favoring higher h-indices
+            h_indices_sorted = sorted(h_indices, reverse=True)
+            
+            weights = [0.5, 0.3, 0.2] + [0.1] * (len(h_indices_sorted) - 3)
+            weights = weights[:len(h_indices_sorted)]
+            
+            weighted_h_index = sum(h * w for h, w in zip(h_indices_sorted, weights)) / sum(weights)
+               
+            h_score = min(math.log(weighted_h_index + 1) / math.log(101), 1.0)
             score += h_score * 0.7
         
         # Factor 2: Institution prestige (30% weight)

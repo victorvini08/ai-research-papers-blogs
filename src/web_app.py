@@ -230,7 +230,7 @@ def send_blog_email(subscriber_email: str, blog: Dict) -> bool:
         
         # Create message
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"AI Research Daily - {blog['title']}"
+        msg['Subject'] = f"AI Research Weekly - {blog['title']}"
         msg['From'] = smtp_username
         msg['To'] = subscriber_email
         

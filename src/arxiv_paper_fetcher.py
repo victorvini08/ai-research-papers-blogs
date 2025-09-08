@@ -216,7 +216,7 @@ class PaperFetcher:
             print(f"Error fetching papers by category: {e}")
         
         # Distribute papers across days (approximately equal number per day)
-        papers_per_day = max(1, max_results // 7)  # Distribute across 7 days
+        papers_per_day = max(1, max_results // len(papers_by_date))  # Distribute across 7 days
         papers = []
         
         for date_str, day_papers in sorted(papers_by_date.items(), reverse=True):
